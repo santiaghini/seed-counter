@@ -1,0 +1,49 @@
+# Ignore compiled binaries and executables
+*.exe
+*.o
+*.out
+
+# Ignore local development files
+__pycache__/
+.DS_Store
+.env
+
+# Ignore dependency directories
+node_modules/
+vendor/
+
+# Ignore virtual environments
+venv/
+env/
+.pipenv/
+
+# Ignore log and backup files
+*.log
+*.bak
+*.swp
+
+# Ignore database files
+*.db
+*.sqlite
+
+# Ignore compiled Python bytecode
+*.pyc
+*.pyo
+__pycache__/
+
+# Ignore package manager directories
+pip-wheel-metadata/
+npm-debug.log
+yarn-error.log
+
+# Ignore OS generated files
+Thumbs.db
+.DS_Store
+
+# Ignore sensitive or environment-specific information
+secrets.yml
+config.ini
+
+# Exclude specific files
+.vscode/*
+index/*
