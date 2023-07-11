@@ -97,8 +97,6 @@ def process_image(image_path):
     # Subtract 1 to exclude the background
     num_seeds = len(np.unique(labels_final)) - 1
 
-    print(f"Number of seeds: {num_seeds}")
-
     # update labels_final to be labels with every pixel > 0 set to 255
     final_sure_fg = np.copy(labels_final)
     final_sure_fg[final_sure_fg > 0] = 255
