@@ -1,7 +1,9 @@
+from datetime import datetime
 import argparse
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 DISTANCE_THRESHOLD = 14 # change according to scale of image
 SMALL_AREA = 5 # change according to scale of image
@@ -149,15 +151,47 @@ def plot_full(img):
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
+def setup_parser():
     # Create an argument parser
     parser = argparse.ArgumentParser(description='Process an image to count seeds.')
-    # Add the image path argument
     parser.add_argument('-f', '--file', type=str, help='Path to the image file')
+    parser.add_argument('-d', '--dir', type=str, help='Path to the image directory')
+    parser.add_argument('-o', '--output', type=str, help='Path to the output directory', required=True)
+    parser.add_argument('-s', '--store', action='store_true', help='Store the images')
+
+    return parser
+
+
+if __name__ == "__main__":
+    parser = setup_parser()
 
     # Parse the command line arguments
     args = parser.parse_args()
 
+    files = []
+    if args.file is not None:
+        files.append(args.file)
+    elif args.dir is not None:
+        files = [os.path.join(args.dir, f) for f in os.listdir(args.dir) if os.path.isfile(os.path.join(args.dir, f))]
+    else:
+        raise Exception("No file or directory specified")
+    
     # Call the process_image function with the specified image path
-    num_seeds = process_image(args.file)
-    print(f"Number of seeds: {num_seeds}")
+    results = []
+    for i, file in enumerate(files):
+        print(f'Processing file {i+1} of {len(files)}: {file}')
+        result = process_image(file, args.store, args.output)
+        results.append(result)
+    
+    # Write a csv file with the results where each row is a file and contains the columns: filename, red_seeds, dark_seeds, total_seeds
+    if args.output is not None:
+        # save file with current timestamp
+        output_file = os.path.join(args.output, f'results_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv')
+        with open(output_file, 'w') as f:
+            f.write('filename,red_seeds,dark_seeds,total_seeds\n')
+            for i, result in enumerate(results):
+                f.write(f'{result["file"]},{result["red_seeds"]},{result["dark_seeds"]},{result["total_seeds"]}\n')
+
+        print(f"Finished processing all files and stored results in {output_file}")
+    print("Thanks for your visit!")
+
