@@ -47,9 +47,9 @@ After installing requirements, and making sure that the images are in a director
 ```bash
 python run.py --dir ./images --output ./output_directory --store
 ```
-`--dir`: directory with input images with the specified format (required).
-`--output`: output directory to store results (required)
-`--store`: flag, if present, stores the processed images with contours for counting.
+- `--dir`: directory with input images with the specified format (required).
+- `--output`: output directory to store results (required)
+- `--store`: flag, if present, stores the processed images with contours for counting.
 
 You can get details of all arguments by running:
 ```bash
