@@ -47,3 +47,4 @@ config.ini
 # Exclude specific files
 .vscode/*
 index/*
+output/*
