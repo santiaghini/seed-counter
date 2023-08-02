@@ -30,6 +30,9 @@ def store_results(results, output_folder):
 
 if __name__ == "__main__":
     args = parse_args()
+
+    print(f'Welcome to Seed Counter!')
+    print(f'Make sure that your images are in the input directory in pairs: a BF (brightfield) image and a FL (fluorescent) image. For example, for "img1" you need to have two images: img1_BF.tif and img1_FL.tif')
     
     files = [os.path.join(args.dir, f) for f in os.listdir(args.dir) if os.path.isfile(os.path.join(args.dir, f))]
     # filter out non-image files
@@ -45,6 +48,7 @@ if __name__ == "__main__":
         else:
             image_files[prefix].append(file)
 
+
     print(f'Found {len(image_files.keys())} unique prefixes in {len(files)} files')
 
     # Call the process_image function with the specified image path
@@ -53,23 +57,23 @@ if __name__ == "__main__":
         print(f'Processing image {i+1} of {len(image_files.keys())}')
         result = {'prefix': prefix}
         for file in image_files[prefix]:
-            filename = os.path.basename(file)
+            filename = os.path.basename(file).split('.')[0]
             postfix = filename.split('_')[1]
-            if postfix == 'BFTL':
-                print(f'\tBFTL image: {filename}')
+            if postfix == 'BF':
+                print(f'\tBF (brightfield) image: {filename}')
                 total_seeds = process_seed_image(file, postfix, prefix, args.output if args.store else None)
                 result['total_seeds'] = total_seeds
-            elif postfix == 'RFP':
-                print(f'\tRFP image: {filename}')
+            elif postfix == 'FL':
+                print(f'\FL (fluorescent) image: {filename}')
                 red_seeds = process_seed_image(file, postfix, prefix, args.output if args.store else None)
                 result['red_seeds'] = red_seeds
             else:
                 print(f'\tUnknown image type for {filename}')
 
         if 'total_seeds' not in result:
-            print(f"\tCouldn't find BFTL image for {prefix}")
+            print(f"\tCouldn't find BF (brightfield) image for {prefix}. Remember that image should be named <prefix_id>_BF.<img_extension>. Example: img1_BF.tif")
         if 'red_seeds' not in result:    
-            print(f"\tCouldn't find RFP image for {prefix}")
+            print(f"\tCouldn't find FL (fluorescent) image for {prefix}. Remember that image should be named <prefix_id>_FL.<img_extension>. Example: img1_FL.tif")
 
         result['dark_seeds'] = result.get('total_seeds',0) - result.get('red_seeds',0)
 
