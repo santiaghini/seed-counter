@@ -32,7 +32,7 @@ Images should be in a directory with a specific naming convention:
 `<prefix>_<image_type>.<extension>`
 - `prefix`: name of image, each image pair (mCherry + BF TL) should have the same prefix.
 - `image_type`: either `RFP` (mCherry image) or `BFTL` (brightfield TL)
-- `extension`: extension of the image (usually `.tiff`)
+- `extension`: extension of the image (usually `.tif`)
 
 Example `VZ254_BFTL.tif` and `VZ254_RFP.tif`
 
