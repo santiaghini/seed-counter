@@ -18,18 +18,6 @@ def parse_args():
 
     return parser.parse_args()
 
-
-def store_results(results, output_folder):
-    # save file with current timestamp
-    output_file = os.path.join(output_folder, f'results_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv')
-    with open(output_file, 'w') as f:
-        f.write('prefix,fl_seeds,dark_seeds,total_seeds,ratio fl/total\n')
-        for i, result in enumerate(results):
-            f.write(f'{result["prefix"]},{result.get("fl_seeds")},{result.get("dark_seeds")},{result.get("total_seeds")}\n')
-
-    print(f"Finished processing all files and stored results in {output_file}")
-
-
 def print_welcome_msg():
     print(f'Welcome to Seed Counter!')
     print(f'Make sure that your images are in the input directory in pairs: a {BRIGHTFIELD} (brightfield) image and a {FLUORESCENT} (fluorescent) image. For example, for "img1" you need to have two images: img1_{BRIGHTFIELD}.tif and img1_{FLUORESCENT}.tif')
@@ -51,6 +39,17 @@ def collect_img_files(args):
             image_files[prefix].append(file)
 
     return image_files, files
+
+
+def store_results(results, output_folder):
+    # save file with current timestamp
+    output_file = os.path.join(output_folder, f'results_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv')
+    with open(output_file, 'w') as f:
+        f.write('prefix,fl_seeds,dark_seeds,total_seeds,ratio fl/total\n')
+        for i, result in enumerate(results):
+            f.write(f'{result["prefix"]},{result.get("fl_seeds")},{result.get("dark_seeds")},{result.get("total_seeds")},{result.get("ratio fl/total")}\n')
+
+    print(f"Finished processing all files and stored results in {output_file}")
 
 
 if __name__ == "__main__":
