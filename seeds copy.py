@@ -1,38 +1,31 @@
 import cv2
 import numpy as np
 
-from config import DISTANCE_THRESHOLDS, INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, SMALL_AREA_POST_PASS, BRIGHTFIELD, FLUORESCENT
+from config import DISTANCE_THRESHOLDS, INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, SMALL_AREA_POST_PASS
 from utils import plot_full
 
 
-REF_DIST_THRESH = 8
-REF_MEDIAN_AREA = 1250
-
-
-def get_dist_thresh(median_area):
-    dist_thresh = median_area * REF_DIST_THRESH / REF_MEDIAN_AREA
-    return dist_thresh
-
 # Function to read and process the image
 def process_seed_image(image_path, img_type, prefix, output_dir=None, plot=False):
-    if img_type not in [BRIGHTFIELD, FLUORESCENT]:
-        raise Exception(f'Image type must be either {BRIGHTFIELD} (brightfield) or {FLUORESCENT} (fluorescent)')
+    if img_type not in ['BFTL', 'RFP']:
+        raise Exception('Image type must be either BFTL or RFP')
 
     # Load the image
     image = cv2.imread(image_path)
 
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    if img_type == BRIGHTFIELD:
-        gray = cv2.bitwise_not(gray)
-
-    # contrasted = cv2.equalizeHist(gray)
+    # Split the masked image into B, G, R channels
+    if img_type == 'BFTL':
+        _, unq_channel, _ = cv2.split(image)
+        unq_channel = cv2.bitwise_not(unq_channel)
+    elif img_type == 'RFP':
+        _, _, unq_channel = cv2.split(image)
 
     # Eliminate scale bar
-    gray[-50:, :500] = 0
+    unq_channel[-50:, :500] = 0
 
     # Threshold the unique channel image to isolate bright regions
     # _, thresholded = cv2.threshold(unq_channel, 240, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    _, thresholded = cv2.threshold(gray, INITIAL_BRIGHTNESS_THRESHOLDS[img_type], 255, cv2.THRESH_BINARY)
+    _, thresholded = cv2.threshold(unq_channel, INITIAL_BRIGHTNESS_THRESHOLDS[img_type], 255, cv2.THRESH_BINARY)
 
     ####### Filter small areas
     # Segment by component areas
@@ -40,16 +33,6 @@ def process_seed_image(image_path, img_type, prefix, output_dir=None, plot=False
 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
-
-    median_area = np.median(areas)
-
-    #### Verify median area
-    median_area_label = np.where(areas == median_area)[0][0] + 1
-    median_area_mask = np.zeros(thresholded.shape, dtype="uint8")
-    median_area_mask[labels == median_area_label] = 255
-    if plot:
-        plot_full(median_area_mask)
-    #### END Get median area and verify
 
     # Get indices of all areas smaller than SMALL_AREA
     idxs_small_area = np.where(areas < SMALL_AREA_PRE_PASS)[0] + 1
@@ -59,7 +42,8 @@ def process_seed_image(image_path, img_type, prefix, output_dir=None, plot=False
 
     # Remove areas smaller than SMALL_AREA
     thresholded[mask_small] = 0
-    ####### END Filter small areas
+    #######
+
 
     # noise removal
     kernel = np.ones((3,3),np.uint8)
@@ -72,10 +56,10 @@ def process_seed_image(image_path, img_type, prefix, output_dir=None, plot=False
     # Finding sure foreground area
     dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
 
-    distance_threshold = get_dist_thresh(median_area)
     # Get centers of components from threshold
+    # TODO: PARAMETERIZE THIS
     # ret, sure_fg = cv2.threshold(dist_transform,0.6*dist_transform.max(),255,0)
-    ret, sure_fg = cv2.threshold(dist_transform, distance_threshold, 255, 0)
+    ret, sure_fg = cv2.threshold(dist_transform, DISTANCE_THRESHOLDS[img_type], 255, 0)
     
     ####### START Second pass on large areas
     # Ensure sure_fg is 8-bit before applying connectedComponentsWithStats
