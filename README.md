@@ -1,8 +1,8 @@
 # Seed Segmenter
 
-Seed Segementer is a tool that allows you to take an image of fluorescent seeds and output the count of gene-carrier seeds (red) and "normal" seeds.
+Seed Segementer is a tool that allows you to take an image of fluorescent seeds and output the count of marker seeds (and its ratio) and the total seeds.
 
-It takes a batch of images and outputs in `.csv` format the count of seeds for each input image given.
+Seed Counter takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
 
 **Before**
 <div style="text-align:center">
