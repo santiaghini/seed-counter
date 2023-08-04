@@ -14,10 +14,13 @@ def get_dist_thresh(median_area):
     return dist_thresh
 
 # Function to read and process the image
-def process_seed_image(image_path, img_type, prefix, output_dir=None, plot=False):
+def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, output_dir=None, plot=False):
     if img_type not in [BRIGHTFIELD, FLUORESCENT]:
         raise Exception(f'Image type must be either {BRIGHTFIELD} (brightfield) or {FLUORESCENT} (fluorescent)')
-
+    
+    if not initial_brightness_thresh:
+        initial_brightness_thresh = INITIAL_BRIGHTNESS_THRESHOLDS[img_type]
+    
     # Load the image
     image = cv2.imread(image_path)
 
@@ -32,7 +35,7 @@ def process_seed_image(image_path, img_type, prefix, output_dir=None, plot=False
 
     # Threshold the unique channel image to isolate bright regions
     # _, thresholded = cv2.threshold(unq_channel, 240, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    _, thresholded = cv2.threshold(gray, INITIAL_BRIGHTNESS_THRESHOLDS[img_type], 255, cv2.THRESH_BINARY)
+    _, thresholded = cv2.threshold(gray, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
 
     ####### Filter small areas
     # Segment by component areas
