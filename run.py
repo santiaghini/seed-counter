@@ -22,17 +22,16 @@ def parse_args():
     # parse intensity thresholds
     if args.thresh:
         try:
-            bf_thresh, fl_thresh = args.thresh.split(',')
-            args.bf_thresh = int(bf_thresh)
-            args.fl_thresh = int(fl_thresh)
+            bf_thresh, fl_thresh = [int(x) for x in args.thresh.split(',')]
         except:
             raise Exception('Invalid intensity threshold format. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 60,60')
 
-    return args
+    return args, bf_thresh, fl_thresh
 
 def print_welcome_msg():
     print(f'Welcome to Seed Counter!')
     print(f'Make sure that your images are in the input directory in pairs: a {BRIGHTFIELD} (brightfield) image and a {FLUORESCENT} (fluorescent) image. For example, for "img1" you need to have two images: img1_{BRIGHTFIELD}.tif and img1_{FLUORESCENT}.tif')
+    print()
 
 
 def collect_img_files(args):
@@ -55,7 +54,7 @@ def collect_img_files(args):
 
 def store_results(results, output_folder):
     # save file with current timestamp
-    output_file = os.path.join(output_folder, f'results_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv')
+    output_file = os.path.join(output_folder, f'results_{datetime.now().strftime("%Y%m%d_%H:%M:%S")}.csv')
     with open(output_file, 'w') as f:
         f.write('prefix,fl_seeds,dark_seeds,total_seeds,ratio fl/total\n')
         for i, result in enumerate(results):
@@ -65,8 +64,8 @@ def store_results(results, output_folder):
 
 
 if __name__ == "__main__":
-    args = parse_args()
-
+    args, bf_thresh, fl_thresh = parse_args()
+    
     print_welcome_msg()
 
     image_files, files = collect_img_files(args)
@@ -82,11 +81,11 @@ if __name__ == "__main__":
             postfix = filename.split('_')[1]
             if postfix == BRIGHTFIELD:
                 print(f'\t{BRIGHTFIELD} (brightfield) image: {filename}')
-                total_seeds = process_seed_image(file, postfix, prefix, args.bf_thresh, args.output if not args.nostore else None, args.plot)
+                total_seeds = process_seed_image(file, postfix, prefix, bf_thresh, args.output if not args.nostore else None, args.plot)
                 result['total_seeds'] = total_seeds
             elif postfix == FLUORESCENT:
                 print(f'\t{FLUORESCENT} (fluorescent) image: {filename}')
-                fl_seeds = process_seed_image(file, postfix, prefix, args.fl_thresh, args.output if not args.nostore else None, args.plot)
+                fl_seeds = process_seed_image(file, postfix, prefix, fl_thresh, args.output if not args.nostore else None, args.plot)
                 result['fl_seeds'] = fl_seeds
             else:
                 print(f'\tUnknown image type for {filename}')

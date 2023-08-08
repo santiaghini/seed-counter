@@ -13,7 +13,7 @@ def get_dist_thresh(median_area):
     dist_thresh = median_area * REF_DIST_THRESH / REF_MEDIAN_AREA
     return dist_thresh
 
-# Function to read and process the image
+
 def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, output_dir=None, plot=False):
     if img_type not in [BRIGHTFIELD, FLUORESCENT]:
         raise Exception(f'Image type must be either {BRIGHTFIELD} (brightfield) or {FLUORESCENT} (fluorescent)')
@@ -47,11 +47,17 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     median_area = np.median(areas)
 
     #### Verify median area
+    temp_areas = np.copy(areas)
+    # if areas has an even length, add a zero to the start of the end of the array
+    if len(temp_areas) % 2 == 0:
+        temp_areas = np.append(temp_areas, 0)
+        median_area = np.median(temp_areas)
+
     median_area_label = np.where(areas == median_area)[0][0] + 1
     median_area_mask = np.zeros(thresholded.shape, dtype="uint8")
     median_area_mask[labels == median_area_label] = 255
-    if plot:
-        plot_full(median_area_mask)
+    # if plot:
+    #     plot_full(median_area_mask, 'Median area mask')
     #### END Get median area and verify
 
     # Get indices of all areas smaller than SMALL_AREA
@@ -144,7 +150,7 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     # Plot the final sure foreground (count of seeds is computed from these)
     image_final_components = cv2.cvtColor(final_sure_fg, cv2.COLOR_BGR2RGB)
     if plot:
-        plot_full(image_final_components)
+        plot_full(image_final_components, 'Final sure foreground (count of seeds is computed from these)')
 
     ####### START Watershed (for visualization only)
     unknown = cv2.subtract(sure_bg, final_sure_fg)
@@ -157,7 +163,7 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
 
     # Plot markers
     if plot:
-        plot_full(markers)
+        plot_full(markers, 'Markers')
     
     # Increase margin of markers to 3 pixels
     kernel = np.ones((7,7),np.uint8)
@@ -169,7 +175,8 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     # Plot the original image with contours
     image_with_contours = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if plot:
-        plot_full(image_with_contours)
+        plot_full(image_with_contours, 'Image with contours')
+
     if output_dir is not None:
         cv2.imwrite(f'{output_dir}/{prefix}_{img_type}_contours.png', image)
     
