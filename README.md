@@ -39,12 +39,13 @@ pip install -r requirements.txt
 
 After installing requirements, and making sure that the images are in a directory and in the format and specification specified above, Seed Segmenter can be run with:
 ```bash
-python run.py --dir ./images --output ./output_directory --store
+python run.py --dir ./images --output ./output_directory --thresh 60,60
 ```
 - `--dir`: directory with input images with the specified format (required).
 - `--output`: output directory to store results (required)
 - `--nostore`: flag, if present, does not store the processed images with contours for counting.
 - `--plot`: flag, if present, plots intermediate steps for each image.
+- `--thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `60,60`.
 
 You can get details of all arguments by running:
 ```bash
@@ -52,14 +53,6 @@ python run.py --help
 ```
 
 ### Debugging
-In some cases, seeds might not be separated properly or some seeds might be left out from the final result. If this is the case, you can change parameters in `config.py`, particularly the following constants, which are set by type of image.
-
-```python
-# NOTE: This is a number between 0 and 255 (max value) that will be used to threshold image to capture seeds according to brightness
-# Increase if seeds are brighter, decrease if seeds are darker
-# Balance: the smaller this is set, the more likely seeds will be captured BUT the more likely noise will be captured
-INITIAL_BRIGHTNESS_THRESHOLDS = {
-    BRIGHTFIELD: 60,
-    FLUORESCENT: 60
-}
-```
+In some cases, seeds might not be separated properly or some seeds might be left out from the final result. If this is the case, you can use the `--thresh` argument for `run.py`. As a general guide:
+- If the seeds are too dim and are not being segmented, try decreasing the threshold (default is `60`).
+- If the seeds are bright and there are other shapes in the image being captured, try incresing the threshold.
