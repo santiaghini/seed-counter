@@ -15,14 +15,15 @@ def parse_args():
     parser.add_argument('-o', '--output', type=str, help='Path to the output directory', required=True)
     parser.add_argument('-n', '--nostore', action='store_true', help='Do not store contour images')
     parser.add_argument('-p', '--plot', action='store_true', help='Plot images')
-    parser.add_argument('-t', '--thresh', type=str, help='Intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 60,60')
+    parser.add_argument('-t', '--intensity_thresh', type=str, help='Intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 30,30')
+    parser.add_argument('-r', '--radial_thresh', type=float, help='Radial threshold to capture seeds')
 
     args = parser.parse_args()
 
     # parse intensity thresholds
-    if args.thresh:
+    if args.intensity_thresh:
         try:
-            bf_thresh, fl_thresh = [int(x) for x in args.thresh.split(',')]
+            bf_thresh, fl_thresh = [int(x) for x in args.intensity_thresh.split(',')]
         except:
             raise Exception('Invalid intensity threshold format. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 60,60')
 
@@ -81,11 +82,11 @@ if __name__ == "__main__":
             postfix = filename.split('_')[1]
             if postfix == BRIGHTFIELD:
                 print(f'\t{BRIGHTFIELD} (brightfield) image: {filename}')
-                total_seeds = process_seed_image(file, postfix, prefix, bf_thresh, args.output if not args.nostore else None, args.plot)
+                total_seeds = process_seed_image(file, postfix, prefix, bf_thresh, args.radial_thresh, args.output if not args.nostore else None, args.plot)
                 result['total_seeds'] = total_seeds
             elif postfix == FLUORESCENT:
                 print(f'\t{FLUORESCENT} (fluorescent) image: {filename}')
-                fl_seeds = process_seed_image(file, postfix, prefix, fl_thresh, args.output if not args.nostore else None, args.plot)
+                fl_seeds = process_seed_image(file, postfix, prefix, fl_thresh, args.radial_thresh, args.output if not args.nostore else None, args.plot)
                 result['fl_seeds'] = fl_seeds
             else:
                 print(f'\tUnknown image type for {filename}')

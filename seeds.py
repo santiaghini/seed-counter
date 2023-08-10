@@ -1,20 +1,20 @@
 import cv2
 import numpy as np
 
-from config import DISTANCE_THRESHOLDS, INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, SMALL_AREA_POST_PASS, BRIGHTFIELD, FLUORESCENT
+from config import INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, BRIGHTFIELD, FLUORESCENT
 from utils import plot_full
 
 
-REF_DIST_THRESH = 8
+REF_RADIAL_THRESH = 8
 REF_MEDIAN_AREA = 1250
 
 
-def get_dist_thresh(median_area):
-    dist_thresh = median_area * REF_DIST_THRESH / REF_MEDIAN_AREA
-    return dist_thresh
+def get_radial_thresh(median_area):
+    radial_thresh = median_area * REF_RADIAL_THRESH / REF_MEDIAN_AREA
+    return radial_thresh
 
 
-def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, output_dir=None, plot=False):
+def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, radial_threshold, output_dir=None, plot=False):
     if img_type not in [BRIGHTFIELD, FLUORESCENT]:
         raise Exception(f'Image type must be either {BRIGHTFIELD} (brightfield) or {FLUORESCENT} (fluorescent)')
     
@@ -34,7 +34,6 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     gray[-50:, :500] = 0
 
     # Threshold the unique channel image to isolate bright regions
-    # _, thresholded = cv2.threshold(unq_channel, 240, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     _, thresholded = cv2.threshold(gray, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
 
     # Segment by component areas
@@ -43,7 +42,7 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
 
-    ####### Filter small areas
+    ####### START Filter small areas
     # Get indices of all areas smaller than SMALL_AREA
     # small_area_threshold = median_area * 
     idxs_small_area = np.where(areas < SMALL_AREA_PRE_PASS)[0] + 1
@@ -60,8 +59,8 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
-    
-    ####### Obtain and verify median area
+
+    ####### START Obtain and verify median area
     median_area = np.median(areas)
 
     temp_areas = np.copy(areas)
@@ -88,10 +87,11 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     # Finding sure foreground area
     dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
 
-    distance_threshold = get_dist_thresh(median_area)
+    if not radial_threshold:
+        radial_threshold = get_radial_thresh(median_area)
     # Get centers of components from threshold
     # ret, sure_fg = cv2.threshold(dist_transform,0.6*dist_transform.max(),255,0)
-    ret, sure_fg = cv2.threshold(dist_transform, distance_threshold, 255, 0)
+    ret, sure_fg = cv2.threshold(dist_transform, radial_threshold, 255, 0)
     
     ####### START Second pass on large areas
     # Ensure sure_fg is 8-bit before applying connectedComponentsWithStats

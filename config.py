@@ -5,8 +5,8 @@ FLUORESCENT = "FL"
 # Increase if seeds are brighter, decrease if seeds are darker
 # Balance: the smaller this is set, the more likely seeds will be captured BUT the more likely noise will be captured
 INITIAL_BRIGHTNESS_THRESHOLDS = {
-    BRIGHTFIELD: 60,
-    FLUORESCENT: 60
+    BRIGHTFIELD: 30,
+    FLUORESCENT: 30
 }
 
 # Change according to scale of image and size of seeds
