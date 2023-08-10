@@ -10,7 +10,7 @@ INITIAL_BRIGHTNESS_THRESHOLDS = {
 }
 
 # Change according to scale of image and size of seeds
-SMALL_AREA_PRE_PASS = 100
+SMALL_AREA_PRE_PASS = 200
 SMALL_AREA_POST_PASS = 5
 
 # Change according to size of scale bar

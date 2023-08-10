@@ -37,16 +37,33 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     # _, thresholded = cv2.threshold(unq_channel, 240, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     _, thresholded = cv2.threshold(gray, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
 
-    ####### Filter small areas
     # Segment by component areas
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded, connectivity=8)
 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
 
+    ####### Filter small areas
+    # Get indices of all areas smaller than SMALL_AREA
+    # small_area_threshold = median_area * 
+    idxs_small_area = np.where(areas < SMALL_AREA_PRE_PASS)[0] + 1
+
+    # Create a mask for small areas
+    mask_small = np.isin(labels, idxs_small_area)
+
+    # Remove areas smaller than SMALL_AREA
+    thresholded[mask_small] = 0
+    ####### END Filter small areas
+
+    # get updated areas
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded, connectivity=8)
+
+    # Get the areas of all components
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    
+    ####### Obtain and verify median area
     median_area = np.median(areas)
 
-    #### Verify median area
     temp_areas = np.copy(areas)
     # if areas has an even length, add a zero to the start of the end of the array
     if len(temp_areas) % 2 == 0:
@@ -56,19 +73,9 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     median_area_label = np.where(areas == median_area)[0][0] + 1
     median_area_mask = np.zeros(thresholded.shape, dtype="uint8")
     median_area_mask[labels == median_area_label] = 255
-    # if plot:
-    #     plot_full(median_area_mask, 'Median area mask')
-    #### END Get median area and verify
-
-    # Get indices of all areas smaller than SMALL_AREA
-    idxs_small_area = np.where(areas < SMALL_AREA_PRE_PASS)[0] + 1
-
-    # Create a mask for small areas
-    mask_small = np.isin(labels, idxs_small_area)
-
-    # Remove areas smaller than SMALL_AREA
-    thresholded[mask_small] = 0
-    ####### END Filter small areas
+    if plot:
+        plot_full(median_area_mask, 'Median area mask')
+    ####### END Get median area and verify
 
     # noise removal
     kernel = np.ones((3,3),np.uint8)
