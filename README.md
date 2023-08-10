@@ -39,13 +39,14 @@ pip install -r requirements.txt
 
 After installing requirements, and making sure that the images are in a directory and in the format and specification specified above, Seed Segmenter can be run with:
 ```bash
-python run.py --dir ./images --output ./output_directory --thresh 60,60
+python run.py --dir ./images --output ./output_directory --thresh 30,30
 ```
-- `--dir`: directory with input images with the specified format (required).
-- `--output`: output directory to store results (required)
-- `--nostore`: flag, if present, does not store the processed images with contours for counting.
-- `--plot`: flag, if present, plots intermediate steps for each image.
-- `--thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `60,60`.
+- `-d, --dir`: directory with input images with the specified format (required).
+- `-o, --output`: output directory to store results (required).
+- `-n, --nostore`: flag, if present, does not store the processed images with contours for counting.
+- `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
+- `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
+- `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are capture versus how much seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() bellow to tune this value. 
 
 You can get details of all arguments by running:
 ```bash
@@ -53,6 +54,14 @@ python run.py --help
 ```
 
 ### Debugging
-In some cases, seeds might not be separated properly or some seeds might be left out from the final result. If this is the case, you can use the `--thresh` argument for `run.py`. As a general guide:
+In some cases, seeds might not be separated properly or some seeds might be left out from the final result. There are two parameters to make adjustments and fix this.
+
+`--intensity_thresh`
 - If the seeds are too dim and are not being segmented, try decreasing the threshold (default is `60`).
 - If the seeds are bright and there are other shapes in the image being captured, try incresing the threshold.
+
+`--radial_thresh`
+- Note: this value usually ranges from `8.0` to `18.0`.
+- This parameter has a direct tradeoff between capturing small seeds and separating those that are together. A low value captures small seeds (but doesn't separate very well) and a high value separates well (but leaves out small seeds).
+- If there are seeds that are smaller and are not captured, try setting a low value (e.g. `10.0`).
+- If there most seeds have the same size and there are many seeds that weren't separated properly, try setting a high value (e.g. `16.0`)
