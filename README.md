@@ -1,6 +1,6 @@
-# Seed Segmenter
+# Seed Counter
 
-Seed Segementer is a tool that allows you to take an image of fluorescent seeds and output the count of marker seeds (and its ratio) and the total seeds.
+Seed Counter is a tool that allows you to take an image of fluorescent seeds and output the count of marker seeds (and its ratio) and the total seeds.
 
 Seed Counter takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
 
@@ -17,14 +17,14 @@ Seed Counter takes a batch of images as input and outputs in `.csv` format the c
 </div>
 
 ## Getting started
-Seed segmenter requires the following for each input image:
-- A fluorescent image with marker seeds
-- A brightfield image (to count total number of seeds)
+Seed Counter requires the following for each input image:
+- A fluorescence intensity image (grayscale or false color), to count seeds expressing a fluorescent marker
+- A brightfield image, to count total number of seeds
 
 Images should be in a directory with a specific naming convention:
 
 `<prefix>_<image_type>.<extension>`
-- `prefix`: name of image, each image pair (fluorescent + brightfield) should have the same prefix.
+- `prefix`: name/ID for seed batch being analyzed, each image pair (fluorescent + brightfield) should have the same prefix.
 - `image_type`: either `FL` (fluorescent image) or `BF` (brightfield image)
 - `extension`: extension of the image (usually `.tif`)
 
@@ -58,7 +58,7 @@ In some cases, seeds might not be separated properly or some seeds might be left
 
 `--intensity_thresh`
 - If the seeds are too dim and are not being segmented, try decreasing the threshold (default is `60`).
-- If the seeds are bright and there are other shapes in the image being captured, try incresing the threshold.
+- If the seeds are bright and there are other shapes in the image being captured, try increasing the threshold.
 
 `--radial_thresh`
 - Note: this value usually ranges from `8.0` to `18.0`.
