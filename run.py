@@ -57,9 +57,9 @@ def store_results(results, output_folder):
     # save file with current timestamp
     output_file = os.path.join(output_folder, f'results_{datetime.now().strftime("%Y%m%d_%H:%M:%S")}.csv')
     with open(output_file, 'w') as f:
-        f.write('prefix,fl_seeds,dark_seeds,total_seeds,ratio fl/total\n')
+        f.write('prefix,fl_seeds,non_fl_seeds,total_seeds,ratio fl/total\n')
         for i, result in enumerate(results):
-            f.write(f'{result["prefix"]},{result.get("fl_seeds")},{result.get("dark_seeds")},{result.get("total_seeds")},{result.get("ratio fl/total")}\n')
+            f.write(f'{result["prefix"]},{result.get("fl_seeds")},{result.get("non_fl_seeds")},{result.get("total_seeds")},{result.get("ratio fl/total")}\n')
 
     print(f"Finished processing all files and stored results in {output_file}")
 
@@ -96,9 +96,9 @@ if __name__ == "__main__":
         if 'fl_seeds' not in result:    
             print(f"\tCouldn't find {FLUORESCENT} (fluorescent) image for {prefix}. Remember that image should be named <prefix_id>_{FLUORESCENT}.<img_extension>. Example: img1_{FLUORESCENT}.tif")
 
-        result['dark_seeds'] = result['total_seeds'] - result['fl_seeds'] if 'total_seeds' in result and 'fl_seeds' in result else None
+        result['non_fl_seeds'] = result['total_seeds'] - result['fl_seeds'] if 'total_seeds' in result and 'fl_seeds' in result else None
 
-        if result['dark_seeds']:
+        if result['non_fl_seeds']:
             result['ratio fl/total'] = round(result['fl_seeds'] / result['total_seeds'], 2)
 
         results.append(result)
