@@ -65,3 +65,12 @@ In some cases, seeds might not be separated properly or some seeds might be left
 - This parameter has a direct tradeoff between capturing small seeds and separating those that are together. A low value captures small seeds (but doesn't separate very well) and a high value separates well (but leaves out small seeds).
 - If there are seeds that are smaller and are not captured, try setting a low value (e.g. `10.0`).
 - If there most seeds have the same size and there are many seeds that weren't separated properly, try setting a high value (e.g. `16.0`)
+- 
+
+## Image Acquisition
+
+You may need to play around with the settings on your microscope to acquire images with the right contrast/brightness. These are the settings used for our lab's Leica Widefield scope, for seeds carrying FAST markers for either RFP or GFP (https://pubmed.ncbi.nlm.nih.gov/19891705/)
+
+- Epifluorescence with mCherry filter: 100 ms exposure (FastRed marker)
+- Epifluorescence with GFP filter: 500 ms exposure (FastGreen marker)
+- Brightfield with transillumination light: 100% intensity, 50% aperture
