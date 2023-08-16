@@ -48,3 +48,6 @@ config.ini
 .vscode/*
 index/*
 output/*
+
+# ignore everything inside imgs directory
+imgs/**

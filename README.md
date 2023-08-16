@@ -6,14 +6,16 @@ Seed Counter takes a batch of images as input and outputs in `.csv` format the c
 
 **Before**
 <div style="text-align:center">
-    <img src="readme_imgs/before.jpg" alt="Before" height="300">
+    <img src="readme_imgs/raw_fl.png" alt="raw_fl" height="300">
+    <img src="readme_imgs/raw_bf.png" alt="raw_bf" height="300">
 </div>
 
 <br>
 
 **After**
 <div style="text-align:center">
-    <img src="readme_imgs/segmented.png" alt="After" height="300">
+    <img src="readme_imgs/segmented_fl.png" alt="segmented_fl" height="300">
+    <img src="readme_imgs/segmented_bf.png" alt="segmented_bf" height="300">
 </div>
 
 ## Getting started
