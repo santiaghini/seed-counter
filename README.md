@@ -4,14 +4,14 @@ Seed Counter is a tool that counts the number of seeds in an image. This tool wa
 
 Seed Counter takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
 
-**Before**
+**Raw Image**
 <div style="text-align:center">
     <img src="readme_imgs/before.jpg" alt="Before" height="300">
 </div>
 
 <br>
 
-**After**
+**Segmented Image**
 <div style="text-align:center">
     <img src="readme_imgs/segmented.png" alt="After" height="300">
 </div>
