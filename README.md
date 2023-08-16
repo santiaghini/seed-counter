@@ -39,14 +39,14 @@ pip install -r requirements.txt
 
 After installing requirements, and making sure that the images are in a directory and in the format and specification specified above, Seed Segmenter can be run with:
 ```bash
-python run.py --dir ./images --output ./output_directory --thresh 30,30
+python run.py --dir ./images --output ./output_directory --intensity_thresh 30,30
 ```
 - `-d, --dir`: directory with input images with the specified format (required).
 - `-o, --output`: output directory to store results (required).
 - `-n, --nostore`: flag, if present, does not store the processed images with contours for counting.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
 - `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
-- `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are capture versus how much seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() bellow to tune this value. 
+- `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are capture versus how much seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() bellow to tune this value. By default this value is set automatically using the median seed area in the image.
 
 You can get details of all arguments by running:
 ```bash
@@ -57,7 +57,7 @@ python run.py --help
 In some cases, seeds might not be separated properly or some seeds might be left out from the final result. There are two parameters to make adjustments and fix this.
 
 `--intensity_thresh`
-- If the seeds are too dim and are not being segmented, try decreasing the threshold (default is `60`).
+- If the seeds are too dim and are not being segmented, try decreasing the threshold (default is `30`).
 - If the seeds are bright and there are other shapes in the image being captured, try increasing the threshold.
 
 `--radial_thresh`
