@@ -39,7 +39,7 @@ First, install the required dependencies. Make sure you have at least `Python 3.
 pip install -r requirements.txt
 ```
 
-After installing requirements, and making sure that the images are in a directory and in the format and specification specified above, Seed Segmenter can be run with:
+After installing requirements, 1) `cd` into the folder containing this repo and 2) make sure that the images are in a directory and in the format and specification specified above. Then, *Seed Segmenter* can be run with:
 ```bash
 python run.py --dir ./images --output ./output_directory --intensity_thresh 30,30
 ```
