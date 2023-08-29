@@ -71,8 +71,10 @@ In some cases, seeds might not be separated properly or some seeds might be left
 
 ## Image Acquisition
 
-You may need to play around with the settings on your microscope to acquire images with the right contrast/brightness (or adjust the intensity_thresh parameter to work with your images). These are the settings used for our lab's Leica Widefield scope, for seeds carrying FAST markers for either RFP or GFP (https://pubmed.ncbi.nlm.nih.gov/19891705/)
+You may need to play around with the settings on your microscope to acquire images with the right contrast/brightness (or adjust the intensity_thresh parameter to work with your images). These are the settings used for our lab's Leica Widefield scope to generate the example images, for seeds carrying FAST markers for either RFP or GFP (https://pubmed.ncbi.nlm.nih.gov/19891705/)
 
 - Epifluorescence with mCherry filter: 100 ms exposure (FastRed marker)
 - Epifluorescence with GFP filter: 500 ms exposure (FastGreen marker)
 - Brightfield with transillumination light: 100% intensity, 100% aperture
+
+With lower exposure (50 ms and 250 ms for FastRed and FastGreen respectively), non-fluorescent seeds only have background levels of signal, and we found that a lower intensity threshold of 20 was both sufficient and necessary. 
