@@ -21,6 +21,7 @@ def parse_args():
     args = parser.parse_args()
 
     # parse intensity thresholds
+    bf_thresh, fl_thresh = None, None
     if args.intensity_thresh:
         try:
             bf_thresh, fl_thresh = [int(x) for x in args.intensity_thresh.split(',')]
