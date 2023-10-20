@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 
 from config import BRIGHTFIELD, FLUORESCENT
-from seeds import process_seed_image
+from utils import build_results_csv, process_batch, store_results, VALID_EXTENSIONS
 
 
 def parse_args():
@@ -36,11 +36,10 @@ def print_welcome_msg():
     print()
 
 
-def collect_img_files(args):
-    files = [os.path.join(args.dir, f) for f in os.listdir(args.dir) if os.path.isfile(os.path.join(args.dir, f))]
+def collect_img_files(input_dir):
+    files = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
     # filter out non-image files
-    valid_extensions = ['.tif', '.tiff', '.png', '.jpg', '.jpeg']
-    files = [f for f in files if os.path.splitext(f)[1].lower() in valid_extensions]
+    files = [f for f in files if os.path.splitext(f)[1].lower() in VALID_EXTENSIONS]
     files.sort()
 
     image_files = {}
@@ -51,18 +50,7 @@ def collect_img_files(args):
         else:
             image_files[prefix].append(file)
 
-    return image_files, files
-
-
-def store_results(results, output_folder):
-    # save file with current timestamp
-    output_file = os.path.join(output_folder, f'results_{datetime.now().strftime("%Y%m%d_%H:%M:%S")}.csv')
-    with open(output_file, 'w') as f:
-        f.write('prefix,fl_seeds,non_fl_seeds,total_seeds,ratio fl/total\n')
-        for i, result in enumerate(results):
-            f.write(f'{result["prefix"]},{result.get("fl_seeds")},{result.get("non_fl_seeds")},{result.get("total_seeds")},{result.get("ratio fl/total")}\n')
-
-    print(f"Finished processing all files and stored results in {output_file}")
+    return prefix_to_filenames, files
 
 
 if __name__ == "__main__":
@@ -70,41 +58,19 @@ if __name__ == "__main__":
     
     print_welcome_msg()
 
-    image_files, files = collect_img_files(args)
-    print(f'Found {len(image_files.keys())} unique prefixes in {len(files)} files')
+    prefix_to_filenames, files = collect_img_files(args.dir)
+    print(f'Found {len(prefix_to_filenames.keys())} unique prefixes in {len(files)} files')
 
     # Call the process_image function with the specified image path
     results = []
-    for i, prefix in enumerate(sorted(image_files.keys())):
-        print(f'Processing image {i+1} of {len(image_files.keys())}')
-        result = {'prefix': prefix}
-        for file in sorted(image_files[prefix]):
-            filename = os.path.basename(file).split('.')[0]
-            postfix = filename.split('_')[1]
-            if postfix == BRIGHTFIELD:
-                print(f'\t{BRIGHTFIELD} (brightfield) image: {filename}')
-                total_seeds = process_seed_image(file, postfix, prefix, bf_thresh, args.radial_thresh, args.output if not args.nostore else None, args.plot)
-                result['total_seeds'] = total_seeds
-            elif postfix == FLUORESCENT:
-                print(f'\t{FLUORESCENT} (fluorescent) image: {filename}')
-                fl_seeds = process_seed_image(file, postfix, prefix, fl_thresh, args.radial_thresh, args.output if not args.nostore else None, args.plot)
-                result['fl_seeds'] = fl_seeds
-            else:
-                print(f'\tUnknown image type for {filename}')
+    for message in process_batch(prefix_to_filenames, bf_thresh, fl_thresh, args.radial_thresh, args.output):
+        if type(message) == str:
+            print(message)
+        else:
+            results = message
 
-        if 'total_seeds' not in result:
-            print(f"\tCouldn't find {BRIGHTFIELD} (brightfield) image for {prefix}. Remember that image should be named <prefix_id>_{BRIGHTFIELD}.<img_extension>. Example: img1_{BRIGHTFIELD}.tif")
-        if 'fl_seeds' not in result:    
-            print(f"\tCouldn't find {FLUORESCENT} (fluorescent) image for {prefix}. Remember that image should be named <prefix_id>_{FLUORESCENT}.<img_extension>. Example: img1_{FLUORESCENT}.tif")
-
-        result['non_fl_seeds'] = result['total_seeds'] - result['fl_seeds'] if 'total_seeds' in result and 'fl_seeds' in result else None
-
-        if result['non_fl_seeds']:
-            result['ratio fl/total'] = round(result['fl_seeds'] / result['total_seeds'], 2)
-
-        results.append(result)
-    
-    store_results(results, args.output)
+    results_csv = build_results_csv(results)
+    store_results(results_csv, args.output)
 
     print("Thanks for your visit!")
 
