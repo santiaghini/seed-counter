@@ -8,7 +8,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from app_utils import get_batch_id, load_files, run_batch
+from app_utils import get_batch_id, load_files, run_batch, create_folders
 import seeds
 from config import BRIGHTFIELD, FLUORESCENT, INITIAL_BRIGHTNESS_THRESHOLDS
 from utils import build_results_csv, store_results
@@ -70,8 +70,6 @@ if st.session_state['curr_step'] == LOBBY:
     st.header("Upload a file")
 
     uploaded_files = st.file_uploader("Choose a file", accept_multiple_files=True)
-    for i, uploaded_file in enumerate(uploaded_files):
-        st.write(f"filename {i+1}: {uploaded_file.name}")
 
     ### Parameter box
     manual_setup = st.checkbox("Manual Setup", value=False)
@@ -84,26 +82,44 @@ if st.session_state['curr_step'] == LOBBY:
 
     ### RUN BUTTON
     if st.button("Run Seed Counter", disabled=not uploaded_files):
-        st.session_state['curr_step'] = LOADING
+        # st.session_state['curr_step'] = LOADING
+        print(f"uploaded_files: {uploaded_files}")
 
         BATCH_ID = get_batch_id()
-        prefix_to_filenames, nfiles = load_files(uploaded_files, BATCH_ID)
+        batch_dir, input_dir, output_dir = create_folders(BATCH_ID)
+
+        prefix_to_filenames, nfiles = load_files(uploaded_files, input_dir)
         results = None
-        batch_output_dir = None
-        for m in run_batch(BATCH_ID, RUN_PARAMS, prefix_to_filenames):
+
+        print(f"prefix_to_filenames: {prefix_to_filenames}")
+
+        print("running batch...")
+        st.subheader("Logs")
+        for m in run_batch(BATCH_ID, RUN_PARAMS, prefix_to_filenames, output_dir):
             if type(m) == str:
+                print(m)
                 st.write(m)
             else:
-                results, batch_output_dir = m
+                results = m
 
         st.write("Done!")
-        st.session_state['results'] = results
+        # st.session_state['results'] = results
 
         results_csv = build_results_csv(results)
-        store_results(results_csv, batch_output_dir, BATCH_ID)
+        results_csv_path = store_results(results_csv, output_dir, BATCH_ID)
 
-        st.session_state['curr_step'] = RESULTS
-        st.session_state['curr_batch'] = {'batch_id': BATCH_ID, 'batch_output_dir': batch_output_dir}
+        st.header("Results")
+        st.table(results_csv)
+
+        st.download_button(
+            label="Download results as CSV",
+            data=open(results_csv_path, 'rb'),
+            file_name=f'seed_counter_{BATCH_ID}.csv',
+            mime='text/csv',
+        )
+
+        # st.session_state['curr_step'] = RESULTS
+        # st.session_state['curr_batch'] = {'batch_id': BATCH_ID, 'batch_output_dir': batch_output_dir}
 
 
 ############# STEP: LOADING

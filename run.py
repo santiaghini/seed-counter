@@ -3,7 +3,43 @@ from datetime import datetime
 import os
 
 from config import BRIGHTFIELD, FLUORESCENT
-from utils import build_results_csv, process_batch, store_results, VALID_EXTENSIONS
+from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result
+from seeds import process_seed_image
+
+def process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, batch_output_dir):
+    print("Running process_batch()")
+    results = []
+    for i, prefix in enumerate(sorted(prefix_to_filenames.keys())):
+        yield f'Processing prefix {i+1} of {len(prefix_to_filenames.keys())}'
+        result = Result(prefix)
+        for file in sorted(prefix_to_filenames[prefix]):
+            filename = os.path.basename(file).split('.')[0]
+            postfix = filename.split('_')[1]
+            if postfix == BRIGHTFIELD:
+                yield f'\t{BRIGHTFIELD} (brightfield) image: {filename}'
+                total_seeds = process_seed_image(file, postfix, prefix, bf_thresh, radial_thresh, batch_output_dir)
+                result.total_seeds = total_seeds
+            elif postfix == FLUORESCENT:
+                yield f'\t{FLUORESCENT} (fluorescent) image: {filename}'
+                fl_seeds = process_seed_image(file, postfix, prefix, fl_thresh, radial_thresh, batch_output_dir)
+                result.fl_seeds = fl_seeds
+            else:
+                yield f'\tUnknown image type for {filename}'
+
+        if result.total_seeds == None:
+            yield f"\tCouldn't find {BRIGHTFIELD} (brightfield) image for {prefix}. Remember that image should be named <prefix_id>_{BRIGHTFIELD}.<img_extension>. Example: img1_{BRIGHTFIELD}.tif"
+        if result.fl_seeds == None:    
+            yield f"\tCouldn't find {FLUORESCENT} (fluorescent) image for {prefix}. Remember that image should be named <prefix_id>_{FLUORESCENT}.<img_extension>. Example: img1_{FLUORESCENT}.tif"
+
+        if result.total_seeds != None and result.fl_seeds != None:
+            result.non_fl_seeds = result.total_seeds - result.fl_seeds
+
+        if result.non_fl_seeds:
+            result.ratio_fl_total = round(result.fl_seeds / result.total_seeds, 2)
+
+        results.append(result)
+
+    yield results
 
 
 def parse_args():
