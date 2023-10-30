@@ -1,4 +1,10 @@
+'''
+TODO:
+- Fix state changes that delete everything: radio button selection, download csv
+'''
+
 import streamlit as st
+from PIL import Image
 
 import os
 import sys
@@ -12,6 +18,7 @@ from app_utils import get_batch_id, load_files, run_batch, create_folders
 import seeds
 from config import BRIGHTFIELD, FLUORESCENT, INITIAL_BRIGHTNESS_THRESHOLDS
 from utils import build_results_csv, store_results
+from constants import INSTRUCTIONS_TEXT
 
 st.set_page_config(
     page_title='Seed Counter',
@@ -19,7 +26,7 @@ st.set_page_config(
     layout='wide'
 )
 
-############# GLOBALS
+############# GLOBALS #############
 RADIAL_THRESH_DEFAULT = 12
 
 BATCH_ID = None
@@ -30,7 +37,7 @@ RUN_PARAMS = {
 }
 PREFIX_TO_FILENAMES = None
 
-############# STATE
+############# STATE #############
 LOBBY = 'lobby'
 LOADING = 'loading'
 RESULTS = 'results'
@@ -51,7 +58,7 @@ if 'results_csv' not in st.session_state:
 if 'logging' not in st.session_state:
     st.session_state['logging'] = True
 
-############# UI
+############# UI #############
 
 st.title(":seedling: Seed Counter")
 
@@ -61,11 +68,11 @@ if on:
 else:
     st.session_state['logging'] = False
 
-############# STEP: LOBBY
+############# STEP: LOBBY #############
 
 if st.session_state['curr_step'] == LOBBY:
     st.header("Instructions")
-    st.markdown("This are some instructions on how to use the app.")
+    st.markdown(INSTRUCTIONS_TEXT)
 
     st.header("Upload a file")
 
@@ -121,14 +128,48 @@ if st.session_state['curr_step'] == LOBBY:
         # st.session_state['curr_step'] = RESULTS
         # st.session_state['curr_batch'] = {'batch_id': BATCH_ID, 'batch_output_dir': batch_output_dir}
 
+        st.header("Visualize output images")
 
-############# STEP: LOADING
+        # get all png files from output_dir
+        output_imgs = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if os.path.isfile(os.path.join(output_dir, f)) and f.endswith('.png')]
+        
+        # group images by prefix
+        prefix_to_output_imgs = {}
+        for img in output_imgs:
+            prefix = os.path.basename(img).split('_')[0]
+            if prefix not in prefix_to_output_imgs:
+                prefix_to_output_imgs[prefix] = [img]
+            else:
+                prefix_to_output_imgs[prefix].append(img)
+
+
+        col1, col2 = st.columns([1, 3])
+        prefixes = list(prefix_to_output_imgs.keys())
+        prefix = prefixes[0]
+        with col1:
+            prefix = st.radio(
+                "Select a prefix to display the results",
+                list(prefix_to_output_imgs.keys())
+            )
+
+        with col2:
+            image_paths = sorted(prefix_to_output_imgs[prefix])
+
+            for image_path in image_paths:
+                image = Image.open(image_path)
+                caption = f"{'Fluorescent' if 'FL' in image_path else 'Brightfield'} - {image_path}"
+                st.image(image, caption=caption, width=600)
+
+
+
+
+############# STEP: LOADING #############
 
 elif st.session_state['curr_step'] == LOADING:
     st.write("Running Seed Counter...")
 
 
-############# STEP: RESULTS
+############# STEP: RESULTS #############
 
 elif st.session_state['curr_step'] == RESULTS:
     results_csv = st.session_state['results_csv']
