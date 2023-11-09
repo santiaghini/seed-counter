@@ -203,6 +203,8 @@ st.button("Run Seed Counter", disabled=not uploaded_files, on_click=click_run_bu
 if st.session_state.clicked_run:
     print(f"uploaded_files: {uploaded_files}")
 
+    st.balloons()
+
     run_results = st.session_state.run_results
 
     st.header("Results")
