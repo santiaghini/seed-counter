@@ -62,7 +62,7 @@ def run_batch(batch_id, run_params, prefix_to_filenames, output_dir):
     fl_thresh = run_params['fl_intensity_thresh']
     radial_thresh = run_params['radial_thresh']
 
-    print(f'Running batch {batch_id} with params: {run_params}')
+    yield f'Running batch {batch_id} with params: {run_params}'
     results = None
     for m in process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, output_dir):
         if type(m) == str:

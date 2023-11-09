@@ -28,7 +28,7 @@ class Result:
 
 
 def build_results_csv(results):
-    col_names = ['prefix', 'fl_seeds', 'non_fl_seeds', 'total_seeds', 'ratio_fl_total']
+    col_names = ['sample', 'fl_seeds', 'non_fl_seeds', 'total_seeds', 'ratio_fl_total']
     rows = [col_names]
     for result in results:
         row = [result.prefix, result.fl_seeds, result.non_fl_seeds, result.total_seeds, result.ratio_fl_total]

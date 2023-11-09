@@ -25,8 +25,8 @@ Seed Counter requires the following for each input image:
 
 Images should be in a directory with a specific naming convention:
 
-`<prefix>_<image_type>.<extension>`
-- `prefix`: name/ID for seed batch being analyzed, each image pair (fluorescent + brightfield) should have the same prefix.
+`<sample>_<image_type>.<extension>`
+- `sample`: name/ID for the sample being analyzed, each image pair (fluorescent + brightfield) in the sample should have the same prefix.
 - `image_type`: either `FL` (fluorescent image) or `BF` (brightfield image)
 - `extension`: extension of the image (usually `.tif`)
 
@@ -67,7 +67,6 @@ In some cases, seeds might not be separated properly or some seeds might be left
 - This parameter has a direct tradeoff between capturing small seeds and separating those that are together. A low value captures small seeds (but doesn't separate very well) and a high value separates well (but leaves out small seeds).
 - If there are seeds that are smaller and are not captured, try setting a low value (e.g. `10.0`).
 - If there most seeds have the same size and there are many seeds that weren't separated properly, try setting a high value (e.g. `16.0`)
-- 
 
 ## Image Acquisition
 

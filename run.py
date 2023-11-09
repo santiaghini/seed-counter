@@ -10,7 +10,7 @@ def process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, batc
     print("Running process_batch()")
     results = []
     for i, prefix in enumerate(sorted(prefix_to_filenames.keys())):
-        yield f'Processing prefix {i+1} of {len(prefix_to_filenames.keys())}'
+        yield f'Processing sample {prefix} ({i+1} of {len(prefix_to_filenames.keys())}):'
         result = Result(prefix)
         for file in sorted(prefix_to_filenames[prefix]):
             filename = os.path.basename(file).split('.')[0]
