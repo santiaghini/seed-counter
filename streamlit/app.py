@@ -12,11 +12,11 @@ sys.path.append(parent_dir)
 from app_utils import get_batch_id, load_files, run_batch, create_folders
 import seeds
 from config import BRIGHTFIELD, FLUORESCENT, INITIAL_BRIGHTNESS_THRESHOLDS
-from utils import build_results_csv, store_results
+from utils import build_results_csv, store_results, validate_filenames, get_results_rounded
 from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 
 st.set_page_config(
-    page_title='Seed Counter',
+    page_title='Seed Counter by Brophy Lab',
     page_icon=':seedling:',
     # layout='wide'
 )
@@ -71,6 +71,10 @@ if 'logs_content' not in st.session_state:
 if 'expanded_params' not in st.session_state:
     st.session_state.expanded_params = False
 
+if 'has_clicked_once' not in st.session_state:
+    st.session_state.has_clicked_once = False
+
+
 ##########################           LOGIC           ##########################
 
 def clear():
@@ -87,12 +91,21 @@ def click_reset_button():
     clear()
 
 def click_run_button():
-    if not st.session_state.clicked_run:
+    success = run_for_batch(RUN_PARAMS, uploaded_files)
+    if success and not st.session_state.clicked_run:
         st.session_state.clicked_run = True
-    run_for_batch(RUN_PARAMS, uploaded_files)
+
+    if success and not st.session_state.has_clicked_once:
+        st.session_state.has_clicked_once = True
 
 @st.cache_data
 def run_for_batch(run_params, files_uploaded):
+    try:
+        validate_filenames([f.name for f in files_uploaded])
+    except Exception as e:
+        st.error(e)
+        return 0
+    
     clear()
 
     BATCH_ID = get_batch_id()
@@ -113,8 +126,11 @@ def run_for_batch(run_params, files_uploaded):
 
     st.session_state.logs_content += "Done!\n"
 
-    results_csv = build_results_csv(results)
+    results_rounded = get_results_rounded(results, 2)
+    results_csv = build_results_csv(results_rounded)
     results_csv_path = store_results(results_csv, output_dir, BATCH_ID)
+
+    print(f"results_csv: {results_csv}")
 
     st.session_state.run_results = {
         'results': results,
@@ -122,6 +138,9 @@ def run_for_batch(run_params, files_uploaded):
         'results_csv_path': results_csv_path,
         'output_dir': output_dir,
     }
+    if not st.session_state.has_clicked_once:
+        st.balloons()
+    return 1
 
 @st.cache_data
 def get_output_imgs(output_dir):
@@ -144,7 +163,9 @@ def build_prefix_to_output_imgs(output_imgs):
 
 ##########################           UI           ##########################
 
-st.title(":seedling: Seed Counter")
+st.title(":seedling: Seed Counter by Brophy Lab")
+
+st.markdown("[GitHub Repo](https://github.com/santiaghini/seed-counter)")
 
 on = st.toggle
 if on:
@@ -167,7 +188,7 @@ if st.session_state.clicked_run:
 uploaded_files = st.file_uploader("Choose a file", accept_multiple_files=True)
 
 ### Parameter box
-with st.expander("**Parameters** — (manual setup)", expanded=st.session_state.expanded_params):
+with st.expander("**Parameters** — (manual setup)"):
     # if not st.session_state.expanded_params:
     #     st.session_state.expanded_params = True
 
@@ -203,9 +224,11 @@ st.button("Run Seed Counter", disabled=not uploaded_files, on_click=click_run_bu
 if st.session_state.clicked_run:
     print(f"uploaded_files: {uploaded_files}")
 
-    st.balloons()
-
     run_results = st.session_state.run_results
+
+    # with st.spinner('Processing images...'):
+    #     while run_results['results'] is None:
+    #         pass
 
     st.header("Results")
 
@@ -213,38 +236,41 @@ if st.session_state.clicked_run:
         for line in st.session_state.logs_content.split('\n'):
             st.write(line)
 
-    st.table(run_results['results_csv'])
 
-    st.download_button(
-        label="Download results as CSV",
-        data=open(run_results['results_csv_path'], 'rb'),
-        file_name=f'seed_counter_{BATCH_ID}.csv',
-        mime='text/csv',
-    )
+    if run_results['results']:
 
-    st.header("Output Images with Seeds Highlighted")
+        st.table(run_results['results_csv'])
 
-    # get all png files from output_dir
-    output_imgs = get_output_imgs(run_results['output_dir'])
-    # group images by prefix
-    prefix_to_output_imgs = build_prefix_to_output_imgs(output_imgs)
-
-    col1, col2 = st.columns([1, 3])
-    prefixes = sorted(list(prefix_to_output_imgs.keys()))
-    prefix = prefixes[0]
-    with col1:
-        prefix = st.radio(
-            "Select a sample to display the results",
-            list(prefix_to_output_imgs.keys())
+        st.download_button(
+            label="Download results as CSV",
+            data=open(run_results['results_csv_path'], 'rb'),
+            file_name=f'seed_counter_{BATCH_ID}.csv',
+            mime='text/csv',
         )
 
-    with col2:
-        image_paths = sorted(prefix_to_output_imgs[prefix])
+        st.header("Output Images with Seeds Highlighted")
 
-        for image_path in image_paths:
-            image = Image.open(image_path)
-            caption = f"{'Fluorescent' if 'FL' in image_path else 'Brightfield'} - {image_path}"
-            st.image(image, caption=caption, width=500)
+        # get all png files from output_dir
+        output_imgs = get_output_imgs(run_results['output_dir'])
+        # group images by prefix
+        prefix_to_output_imgs = build_prefix_to_output_imgs(output_imgs)
+
+        col1, col2 = st.columns([1, 3])
+        prefixes = sorted(list(prefix_to_output_imgs.keys()))
+        prefix = prefixes[0]
+        with col1:
+            prefix = st.radio(
+                "Select a sample to display the results",
+                list(prefix_to_output_imgs.keys())
+            )
+
+        with col2:
+            image_paths = sorted(prefix_to_output_imgs[prefix])
+
+            for image_path in image_paths:
+                image = Image.open(image_path)
+                caption = f"{'Fluorescent' if 'FL' in image_path else 'Brightfield'} - {image_path}"
+                st.image(image, caption=caption, width=500)
 
 
 ############# STEP: LOADING #############

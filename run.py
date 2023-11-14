@@ -2,12 +2,11 @@ import argparse
 from datetime import datetime
 import os
 
-from config import BRIGHTFIELD, FLUORESCENT
-from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result
+from config import BRIGHTFIELD, FLUORESCENT, TARGET_RATIO
+from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, validate_filenames, apply_chi_squared, get_results_rounded
 from seeds import process_seed_image
 
 def process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, batch_output_dir):
-    print("Running process_batch()")
     results = []
     for i, prefix in enumerate(sorted(prefix_to_filenames.keys())):
         yield f'Processing sample {prefix} ({i+1} of {len(prefix_to_filenames.keys())}):'
@@ -35,7 +34,9 @@ def process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, batc
             result.non_fl_seeds = result.total_seeds - result.fl_seeds
 
         if result.non_fl_seeds:
-            result.ratio_fl_total = round(result.fl_seeds / result.total_seeds, 2)
+            result.ratio_fl_total = result.fl_seeds / result.total_seeds
+
+        apply_chi_squared(result, TARGET_RATIO)
 
         results.append(result)
 
@@ -78,6 +79,8 @@ def collect_img_files(input_dir):
     files = [f for f in files if os.path.splitext(f)[1].lower() in VALID_EXTENSIONS]
     files.sort()
 
+    validate_filenames(files)
+
     image_files = {}
     for file in files:
         prefix = os.path.basename(file).split('_')[0]
@@ -105,8 +108,9 @@ if __name__ == "__main__":
         else:
             results = message
 
-    results_csv = build_results_csv(results)
-    store_results(results_csv, args.output)
+    results_rounded = get_results_rounded(results, 2)
+    results_csv = build_results_csv(results_rounded)
+    store_results(results_rounded, args.output)
 
     print("Thanks for your visit!")
 
