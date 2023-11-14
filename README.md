@@ -1,5 +1,7 @@
 # Seed Counter
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://seed-counter-brophy.streamlit.app)
+
 Seed Counter is a tool that counts the number of seeds in an image. This tool was developed for segregation analysis of transgenic Arabidopsis lines to identify single insertion lines, and as such is optimized for counting the number of fluorescent seeds in a mixed pool of fluorescent and non-fluorescent seeds.
 
 Seed Counter takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
