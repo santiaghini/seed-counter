@@ -1,8 +1,9 @@
 from datetime import datetime
 import os
-from scipy.stats import chisquare
 
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import chisquare
 
 VALID_EXTENSIONS = ['.tif', '.tiff', '.png', '.jpg', '.jpeg']
 
@@ -31,10 +32,12 @@ class Result:
 def apply_chi_squared(result, expected_ratio):
     if result.fl_seeds == None or result.non_fl_seeds == None:
         return
-    observed = [result.fl_seeds, result.non_fl_seeds]
+    observed = np.array([result.fl_seeds, result.non_fl_seeds])
     total = result.total_seeds
-    expected = [total * expected_ratio, total * (1 - expected_ratio)]
-    chi2, p = chisquare(observed, f_exp=expected)
+    expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
+    chi2_result = chisquare(f_obs=observed, f_exp=expected)
+    print(f"chi2_result: {chi2_result}")
+    chi2, p = chi2_result
     result.chisquare = chi2
     result.pvalue = p
 
@@ -55,8 +58,8 @@ def get_results_rounded(results, decimals=2):
         result.non_fl_seeds = round(result.non_fl_seeds)
         result.total_seeds = round(result.total_seeds)
         result.ratio_fl_total = round(result.ratio_fl_total, decimals)
-        result.chisquare = round(result.chisquare, decimals)
-        result.pvalue = round(result.pvalue, decimals)
+        result.chisquare = round(result.chisquare, 4)
+        result.pvalue = round(result.pvalue, 4)
 
     return new_results
 
