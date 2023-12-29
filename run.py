@@ -27,7 +27,7 @@ def process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, batc
 
         if result.total_seeds == None:
             yield f"\tCouldn't find {BRIGHTFIELD} (brightfield) image for {prefix}. Remember that image should be named <prefix_id>_{BRIGHTFIELD}.<img_extension>. Example: img1_{BRIGHTFIELD}.tif"
-        if result.fl_seeds == None:    
+        if result.fl_seeds == None:
             yield f"\tCouldn't find {FLUORESCENT} (fluorescent) image for {prefix}. Remember that image should be named <prefix_id>_{FLUORESCENT}.<img_extension>. Example: img1_{FLUORESCENT}.tif"
 
         if result.total_seeds != None and result.fl_seeds != None:
@@ -83,18 +83,19 @@ def collect_img_files(input_dir):
 
     image_files = {}
     for file in files:
+        #prefix = os.path.basename(file).split('_')[0]
         prefix = os.path.basename(file).split('_')[0]
         if prefix not in image_files:
             image_files[prefix] = [file]
         else:
             image_files[prefix].append(file)
 
-    return prefix_to_filenames, files
+    return image_files, files ###
 
 
 if __name__ == "__main__":
     args, bf_thresh, fl_thresh = parse_args()
-    
+
     print_welcome_msg()
 
     prefix_to_filenames, files = collect_img_files(args.dir)
@@ -110,7 +111,6 @@ if __name__ == "__main__":
 
     results_rounded = get_results_rounded(results, 2)
     results_csv = build_results_csv(results_rounded)
-    store_results(results_rounded, args.output)
+    store_results(results_csv, args.output) ###
 
     print("Thanks for your visit!")
-
