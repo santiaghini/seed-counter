@@ -76,6 +76,6 @@ You may need to play around with the settings on your microscope to acquire imag
 
 - Epifluorescence with mCherry filter: 100 ms exposure (FastRed marker)
 - Epifluorescence with GFP filter: 500 ms exposure (FastGreen marker)
-- Brightfield with transillumination light: 100% intensity, 100% aperture
+- Brightfield with transillumination light: 100 ms exposure, 60% intensity, 50% aperture
 
-With lower exposure (50 ms and 250 ms for FastRed and FastGreen respectively), non-fluorescent seeds only have background levels of signal, and we found that a lower intensity threshold of 20 was both sufficient and necessary. 
+With lower exposure (50 ms and 250 ms for FastRed and FastGreen respectively), non-fluorescent seeds only have background levels of signal, and we found that a lower intensity threshold of 20 was both sufficient and necessary.
