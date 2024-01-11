@@ -1,12 +1,12 @@
-BRIGHTFIELD = "BF"
-FLUORESCENT = "FL"
+DEFAULT_BRIGHTFIELD_SUFFIX = "BF"
+DEFAULT_FLUORESCENT_SUFFIX = "FL"
 
 # NOTE: This is a number between 0 and 255 (max value) that will be used to threshold image to capture seeds according to brightness
 # Increase if seeds are brighter, decrease if seeds are darker
 # Balance: the smaller this is set, the more likely seeds will be captured BUT the more likely noise will be captured
 INITIAL_BRIGHTNESS_THRESHOLDS = {
-    BRIGHTFIELD: 30,
-    FLUORESCENT: 15
+    DEFAULT_BRIGHTFIELD_SUFFIX: 30,
+    DEFAULT_FLUORESCENT_SUFFIX: 15
 }
 
 # Change according to scale of image and size of seeds
@@ -22,8 +22,8 @@ SCALE_BAR_WIDTH = 500
 # Balance: the smaller this is set, the more likely seeds will be separated BUT the more likely smaller (or dimmer) seeds will be left out
 # NOTE: DEPRECATED, now we calculate it based on reference values
 DISTANCE_THRESHOLDS = {
-    BRIGHTFIELD: 10,
-    FLUORESCENT: 12
+    DEFAULT_BRIGHTFIELD_SUFFIX: 10,
+    DEFAULT_FLUORESCENT_SUFFIX: 12
 }
 
 TARGET_RATIO = 0.75

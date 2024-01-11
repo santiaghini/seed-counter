@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from config import INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, BRIGHTFIELD, FLUORESCENT
+from config import INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX
 from utils import plot_full
 
 
@@ -14,9 +14,9 @@ def get_radial_thresh(median_area):
     return radial_thresh
 
 
-def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, radial_threshold, output_dir=None, plot=False):
-    if img_type not in [BRIGHTFIELD, FLUORESCENT]:
-        raise Exception(f'Image type must be either {BRIGHTFIELD} (brightfield) or {FLUORESCENT} (fluorescent)')
+def process_seed_image(image_path, img_type, sample_name, initial_brightness_thresh, radial_threshold, output_dir=None, plot=False):
+    if img_type not in [DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX]:
+        raise Exception(f'Image type must be either {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) or {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent)')
     
     if not initial_brightness_thresh:
         initial_brightness_thresh = INITIAL_BRIGHTNESS_THRESHOLDS[img_type]
@@ -25,7 +25,7 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
     image = cv2.imread(image_path)
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    if img_type == BRIGHTFIELD:
+    if img_type == DEFAULT_BRIGHTFIELD_SUFFIX:
         gray = cv2.bitwise_not(gray)
 
     # contrasted = cv2.equalizeHist(gray)
@@ -185,7 +185,7 @@ def process_seed_image(image_path, img_type, prefix, initial_brightness_thresh, 
         plot_full(image_with_contours, 'Image with contours')
 
     if output_dir is not None:
-        cv2.imwrite(f'{output_dir}/{prefix}_{img_type}_contours.png', image)
+        cv2.imwrite(f'{output_dir}/{sample_name}_{img_type}_contours.png', image)
     
     # Return the number of seeds
     return num_seeds

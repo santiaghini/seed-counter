@@ -35,36 +35,38 @@ def create_folders(batch_id):
     return batch_dir, input_dir, output_dir
 
 
-def load_files(uploaded_files, input_dir):
+def load_files(parsed_filenames, input_dir):
     # filter out non-image files
-    files = [f for f in uploaded_files if '.' + f.name.split('.')[1].lower() in VALID_EXTENSIONS]
-    files.sort(key=lambda f: f.name)
+    parsed_filenames.sort(key=lambda obj: obj['filename'])
 
-    prefix_to_filenames = {}
+    sample_to_filenames = {}
     # create directory for batch run
-    for file in files:
+    for obj in parsed_filenames:
         # save the uploaded file in INPUT_DIR/batch_run/file.name
+        file = obj['file']
         file_path = os.path.join(input_dir, file.name)
         with open(file_path, 'wb') as f:
             f.write(file.getbuffer())
 
-        prefix = os.path.basename(file_path).split('_')[0]
-        if prefix not in prefix_to_filenames:
-            prefix_to_filenames[prefix] = [file_path]
+        sample_name = obj['sample_name']
+        if sample_name not in sample_to_filenames:
+            sample_to_filenames[sample_name] = [file_path]
         else:
-            prefix_to_filenames[prefix].append(file_path)
+            sample_to_filenames[sample_name].append(file_path)
 
-    return prefix_to_filenames, len(files)
+    return sample_to_filenames
 
 
-def run_batch(batch_id, run_params, prefix_to_filenames, output_dir):
+def run_batch(batch_id, run_params, sample_to_filenames, output_dir):
+    bf_suffix = run_params['bf_suffix']
+    fl_suffix = run_params['fl_suffix']
     bf_thresh = run_params['bf_intensity_thresh']
     fl_thresh = run_params['fl_intensity_thresh']
     radial_thresh = run_params['radial_thresh']
 
     yield f'Running batch {batch_id} with params: {run_params}'
     results = None
-    for m in process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, output_dir):
+    for m in process_batch(sample_to_filenames, bf_thresh, fl_thresh, radial_thresh, output_dir, bf_suffix=bf_suffix, fl_suffix=fl_suffix):
         if type(m) == str:
             yield m
         else:

@@ -82,13 +82,27 @@ def store_results(results_csv, batch_output_dir, batch_id=None, filename=None):
     return output_path
 
 
-def validate_filenames(filenames):
-    for filename in filenames:
-        try:
-            pieces = filename.split('_')
-            extension = pieces[-1].split('.')[1]
-        except:
-            raise Exception(f'Invalid filename: {filename}. Filenames must be in the format <sample>_<image_type>.<extension>. Example: VZ254_BF.tif')
+def parse_filename(filename, bf_suffix, fl_suffix):
+    reminder = f"Filenames must be in the format <sample_name>_<image_type_suffix>.<extension>. Example: VZ254_{bf_suffix}.tif"
+    try:
+        pieces = filename.split('.')
+        name = pieces[0]
+        extension = pieces[-1]
 
-        if "." + extension not in VALID_EXTENSIONS:
-            raise Exception(f'Invalid extension: {extension}. Valid extensions are: {VALID_EXTENSIONS}')
+        name_pieces = name.split('_')
+        sample_name = name_pieces[0]
+        img_type = name_pieces[-1]
+
+    except Exception as e:
+        print(e)
+        raise Exception(f'Invalid filename: {filename}. {reminder}')
+    
+
+    if "." + extension not in VALID_EXTENSIONS:
+        raise Exception(f'Invalid extension: {extension}. Valid extensions are: {VALID_EXTENSIONS}. {reminder}')
+    
+
+    if img_type not in [bf_suffix, fl_suffix]:
+        raise Exception(f'Invalid suffix for image type: {img_type}. Valid suffixes are: {bf_suffix} (brightfield) and {fl_suffix} (fluorescent). {reminder}')
+    
+    return sample_name, img_type

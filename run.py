@@ -2,33 +2,40 @@ import argparse
 from datetime import datetime
 import os
 
-from config import BRIGHTFIELD, FLUORESCENT, TARGET_RATIO
-from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, validate_filenames, apply_chi_squared, get_results_rounded
+from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, TARGET_RATIO
+from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, parse_filename, apply_chi_squared, get_results_rounded
 from seeds import process_seed_image
 
-def process_batch(prefix_to_filenames, bf_thresh, fl_thresh, radial_thresh, batch_output_dir):
+def process_batch(sample_to_filenames, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None):
+    if not bf_suffix:
+        bf_suffix = DEFAULT_BRIGHTFIELD_SUFFIX
+    if not fl_suffix:
+        fl_suffix = DEFAULT_FLUORESCENT_SUFFIX
+
     results = []
-    for i, prefix in enumerate(sorted(prefix_to_filenames.keys())):
-        yield f'Processing sample {prefix} ({i+1} of {len(prefix_to_filenames.keys())}):'
-        result = Result(prefix)
-        for file in sorted(prefix_to_filenames[prefix]):
+    for i, sample_name in enumerate(sorted(sample_to_filenames.keys())):
+        yield f'Processing sample {sample_name} ({i+1} of {len(sample_to_filenames.keys())}):'
+        result = Result(sample_name)
+        for file in sorted(sample_to_filenames[sample_name]):
             filename = os.path.basename(file).split('.')[0]
-            postfix = filename.split('_')[1]
-            if postfix == BRIGHTFIELD:
-                yield f'\t{BRIGHTFIELD} (brightfield) image: {filename}'
-                total_seeds = process_seed_image(file, postfix, prefix, bf_thresh, radial_thresh, batch_output_dir)
+            img_type = filename.split('_')[1]
+            if img_type == bf_suffix:
+                yield f'\t{bf_suffix} (brightfield) image: {filename}'
+                img_type_name = DEFAULT_BRIGHTFIELD_SUFFIX
+                total_seeds = process_seed_image(file, img_type_name, sample_name, bf_thresh, radial_thresh, batch_output_dir)
                 result.total_seeds = total_seeds
-            elif postfix == FLUORESCENT:
-                yield f'\t{FLUORESCENT} (fluorescent) image: {filename}'
-                fl_seeds = process_seed_image(file, postfix, prefix, fl_thresh, radial_thresh, batch_output_dir)
+            elif img_type == fl_suffix:
+                yield f'\t{fl_suffix} (fluorescent) image: {filename}'
+                img_type_name = DEFAULT_FLUORESCENT_SUFFIX
+                fl_seeds = process_seed_image(file, img_type_name, sample_name, fl_thresh, radial_thresh, batch_output_dir)
                 result.fl_seeds = fl_seeds
             else:
                 yield f'\tUnknown image type for {filename}'
 
         if result.total_seeds == None:
-            yield f"\tCouldn't find {BRIGHTFIELD} (brightfield) image for {prefix}. Remember that image should be named <prefix_id>_{BRIGHTFIELD}.<img_extension>. Example: img1_{BRIGHTFIELD}.tif"
+            yield f"\tCouldn't find {bf_suffix} (brightfield) image for {sample_name}. Remember that image should be named <prefix_id>_{bf_suffix}.<img_extension>. Example: img1_{bf_suffix}.tif"
         if result.fl_seeds == None:
-            yield f"\tCouldn't find {FLUORESCENT} (fluorescent) image for {prefix}. Remember that image should be named <prefix_id>_{FLUORESCENT}.<img_extension>. Example: img1_{FLUORESCENT}.tif"
+            yield f"\tCouldn't find {fl_suffix} (fluorescent) image for {sample_name}. Remember that image should be named <prefix_id>_{fl_suffix}.<img_extension>. Example: img1_{fl_suffix}.tif"
 
         if result.total_seeds != None and result.fl_seeds != None:
             result.non_fl_seeds = result.total_seeds - result.fl_seeds
@@ -69,7 +76,7 @@ def parse_args():
 
 def print_welcome_msg():
     print(f'Welcome to Seed Counter!')
-    print(f'Make sure that your images are in the input directory in pairs: a {BRIGHTFIELD} (brightfield) image and a {FLUORESCENT} (fluorescent) image. For example, for "img1" you need to have two images: img1_{BRIGHTFIELD}.tif and img1_{FLUORESCENT}.tif')
+    print(f'Make sure that your images are in the input directory in pairs: a {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) image and a {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent) image. For example, for "img1" you need to have two images: img1_{DEFAULT_BRIGHTFIELD_SUFFIX}.tif and img1_{DEFAULT_FLUORESCENT_SUFFIX}.tif')
     print()
 
 
@@ -79,18 +86,17 @@ def collect_img_files(input_dir):
     files = [f for f in files if os.path.splitext(f)[1].lower() in VALID_EXTENSIONS]
     files.sort()
 
-    validate_filenames(files)
+    parse_filename(files)
 
     image_files = {}
     for file in files:
-        #prefix = os.path.basename(file).split('_')[0]
         prefix = os.path.basename(file).split('_')[0]
         if prefix not in image_files:
             image_files[prefix] = [file]
         else:
             image_files[prefix].append(file)
 
-    return image_files, files ###
+    return image_files, files
 
 
 if __name__ == "__main__":
