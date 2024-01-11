@@ -37,9 +37,9 @@ def create_folders(batch_id):
 
 def load_files(parsed_filenames, input_dir):
     # filter out non-image files
-    parsed_filenames.sort(key=lambda obj: obj['filename'])
+    parsed_filenames.sort(key=lambda obj: obj['file_name'])
 
-    sample_to_filenames = {}
+    sample_to_files = {}
     # create directory for batch run
     for obj in parsed_filenames:
         # save the uploaded file in INPUT_DIR/batch_run/file.name
@@ -49,15 +49,21 @@ def load_files(parsed_filenames, input_dir):
             f.write(file.getbuffer())
 
         sample_name = obj['sample_name']
-        if sample_name not in sample_to_filenames:
-            sample_to_filenames[sample_name] = [file_path]
+        file_obj = {
+                'file_path': file_path,
+                'file_name': file.name,
+                'img_type': obj['img_type']
+            }
+        
+        if sample_name not in sample_to_files:
+            sample_to_files[sample_name] = [file_obj]
         else:
-            sample_to_filenames[sample_name].append(file_path)
+            sample_to_files[sample_name].append(file_obj)
 
-    return sample_to_filenames
+    return sample_to_files
 
 
-def run_batch(batch_id, run_params, sample_to_filenames, output_dir):
+def run_batch(batch_id, run_params, sample_to_files, output_dir):
     bf_suffix = run_params['bf_suffix']
     fl_suffix = run_params['fl_suffix']
     bf_thresh = run_params['bf_intensity_thresh']
@@ -66,7 +72,7 @@ def run_batch(batch_id, run_params, sample_to_filenames, output_dir):
 
     yield f'Running batch {batch_id} with params: {run_params}'
     results = None
-    for m in process_batch(sample_to_filenames, bf_thresh, fl_thresh, radial_thresh, output_dir, bf_suffix=bf_suffix, fl_suffix=fl_suffix):
+    for m in process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, output_dir, bf_suffix=bf_suffix, fl_suffix=fl_suffix):
         if type(m) == str:
             yield m
         else:

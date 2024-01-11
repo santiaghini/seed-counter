@@ -111,7 +111,7 @@ def run_for_batch(run_params, files_uploaded):
         try:
             sample_name, img_type = parse_filename(f.name, run_params['bf_suffix'], run_params['fl_suffix'])
             parsed_filenames.append({
-                    'filename': f.name,
+                    'file_name': f.name,
                     'sample_name': sample_name,
                     'img_type': img_type,
                     'file': f
@@ -127,13 +127,13 @@ def run_for_batch(run_params, files_uploaded):
     BATCH_ID = get_batch_id()
     batch_dir, input_dir, output_dir = create_folders(BATCH_ID)
 
-    sample_to_filenames = load_files(parsed_filenames, input_dir)
+    sample_to_files = load_files(parsed_filenames, input_dir)
     results = None
 
-    print(f"sample_to_filenames: {sample_to_filenames}")
+    print(f"sample_to_filenames: {sample_to_files}")
 
     print("running batch...")
-    for m in run_batch(BATCH_ID, run_params, sample_to_filenames, output_dir):
+    for m in run_batch(BATCH_ID, run_params, sample_to_files, output_dir):
         if type(m) == str:
             print(m)
             st.session_state.logs_content += m + '\n'
@@ -141,6 +141,8 @@ def run_for_batch(run_params, files_uploaded):
             results = m
 
     st.session_state.logs_content += "Done!\n"
+
+    print("Results", results)
 
     results_rounded = get_results_rounded(results, 2)
     results_csv = build_results_csv(results_rounded)

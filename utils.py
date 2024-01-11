@@ -27,6 +27,9 @@ class Result:
         self.ratio_fl_total: float = None
         self.chisquare: float = None
         self.pvalue: float = None
+    
+    def __repr__(self):
+        return f"Result(prefix={self.prefix}, fl_seeds={self.fl_seeds}, non_fl_seeds={self.non_fl_seeds}, total_seeds={self.total_seeds}, ratio_fl_total={self.ratio_fl_total}, chisquare={self.chisquare}, pvalue={self.pvalue})"
 
 
 def apply_chi_squared(result, expected_ratio):
@@ -54,14 +57,17 @@ def build_results_csv(results):
 def get_results_rounded(results, decimals=2):
     new_results = results.copy()
     for result in results:
-        result.fl_seeds = round(result.fl_seeds)
-        result.non_fl_seeds = round(result.non_fl_seeds)
-        result.total_seeds = round(result.total_seeds)
-        result.ratio_fl_total = round(result.ratio_fl_total, decimals)
-        result.chisquare = round(result.chisquare, 4)
-        result.pvalue = round(result.pvalue, 4)
+        result.fl_seeds = round_if_not_none(result.fl_seeds)
+        result.non_fl_seeds = round_if_not_none(result.non_fl_seeds)
+        result.total_seeds = round_if_not_none(result.total_seeds)
+        result.ratio_fl_total = round_if_not_none(result.ratio_fl_total, decimals)
+        result.chisquare = round_if_not_none(result.chisquare, 4)
+        result.pvalue = round_if_not_none(result.pvalue, 4)
 
     return new_results
+
+def round_if_not_none(num, decimals=2):
+    return round(num, decimals) if num else None
 
 
 def store_results(results_csv, batch_output_dir, batch_id=None, filename=None):
