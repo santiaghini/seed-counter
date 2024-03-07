@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 
 from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, TARGET_RATIO
-from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, parse_filename, apply_chi_squared, get_results_rounded
+from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, parse_filename, get_results_rounded
 from seeds import process_seed_image
 
 def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None):
@@ -38,14 +38,6 @@ def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_ou
             yield f"\tCouldn't find {bf_suffix} (brightfield) image for {sample_name}. Remember that image should be named <prefix_id>_{bf_suffix}.<img_extension>. Example: img1_{bf_suffix}.tif"
         if result.fl_seeds == None:
             yield f"\tCouldn't find {fl_suffix} (fluorescent) image for {sample_name}. Remember that image should be named <prefix_id>_{fl_suffix}.<img_extension>. Example: img1_{fl_suffix}.tif"
-
-        if result.total_seeds != None and result.fl_seeds != None:
-            result.non_fl_seeds = result.total_seeds - result.fl_seeds
-
-        if result.non_fl_seeds:
-            result.ratio_fl_total = result.fl_seeds / result.total_seeds
-
-        apply_chi_squared(result, TARGET_RATIO)
 
         results.append(result)
 

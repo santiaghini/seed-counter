@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import chisquare
 
+from config import TARGET_RATIO
+
 VALID_EXTENSIONS = ['.tif', '.tiff', '.png', '.jpg', '.jpeg']
 
 def plot_full(img, title='', cmap='jet'):
@@ -21,15 +23,91 @@ def plot_full(img, title='', cmap='jet'):
 class Result:
     def __init__(self, prefix):
         self.prefix: str = prefix
-        self.fl_seeds: int = None
-        self.non_fl_seeds: int = None
-        self.total_seeds: int = None
-        self.ratio_fl_total: float = None
-        self.chisquare: float = None
-        self.pvalue: float = None
+        self.__fl_seeds: int = None
+        self.__non_fl_seeds: int = None
+        self.__total_seeds: int = None
+        self.__ratio_fl_total: float = None
+        self.__chisquare: float = None
+        self.__pvalue: float = None
+
+        self.target_ratio = TARGET_RATIO
     
     def __repr__(self):
-        return f"Result(prefix={self.prefix}, fl_seeds={self.fl_seeds}, non_fl_seeds={self.non_fl_seeds}, total_seeds={self.total_seeds}, ratio_fl_total={self.ratio_fl_total}, chisquare={self.chisquare}, pvalue={self.pvalue})"
+        return f"Result(prefix={self.prefix}, fl_seeds={self.__fl_seeds}, non_fl_seeds={self.__non_fl_seeds}, total_seeds={self.__total_seeds}, ratio_fl_total={self.__ratio_fl_total}, chisquare={self.__chisquare}, pvalue={self.__pvalue})"
+    
+    def to_dict(self):
+        return {
+            'prefix': self.prefix,
+            'fl_seeds': self.__fl_seeds,
+            'non_fl_seeds': self.__non_fl_seeds,
+            'total_seeds': self.__total_seeds,
+            'ratio_fl_total': self.__ratio_fl_total,
+            'chisquare': self.__chisquare,
+            'pvalue': self.__pvalue
+        }
+    
+    @property
+    def fl_seeds(self):
+        return self.__fl_seeds
+    
+    @fl_seeds.setter
+    def fl_seeds(self, value):
+        self.__fl_seeds = value
+        self.update_values()
+
+    @property
+    def total_seeds(self):
+        return self.__total_seeds
+    
+    @total_seeds.setter
+    def total_seeds(self, value):
+        self.__total_seeds = value
+        self.update_values()
+
+    @property
+    def non_fl_seeds(self):
+        return self.__non_fl_seeds
+    
+    @property
+    def ratio_fl_total(self):
+        return self.__ratio_fl_total
+    
+    @property
+    def chisquare(self):
+        return self.__chisquare
+    
+    @property
+    def pvalue(self):
+        return self.__pvalue
+    
+    def update_values(self):
+        if self.__total_seeds != None and self.__fl_seeds != None:
+            self.__non_fl_seeds = self.__total_seeds - self.__fl_seeds
+            self.__ratio_fl_total = self.__fl_seeds / self.__total_seeds
+            self.__chisquare, self.__pvalue = compute_chi2(self, self.target_ratio)
+
+        else:
+            self.__non_fl_seeds = None
+            self.__ratio_fl_total = None
+            self.__chisquare = None
+            self.__pvalue = None
+
+    def round_all(self, decimals=2):
+        self.__fl_seeds = round_if_not_none(self.__fl_seeds)
+        self.__non_fl_seeds = round_if_not_none(self.__non_fl_seeds)
+        self.__total_seeds = round_if_not_none(self.__total_seeds)
+        self.__ratio_fl_total = round_if_not_none(self.__ratio_fl_total, decimals)
+        self.__chisquare = round_if_not_none(self.__chisquare, 4)
+        self.__pvalue = round_if_not_none(self.__pvalue, 4)
+
+
+def compute_chi2(result, expected_ratio):
+    observed = np.array([result.fl_seeds, result.non_fl_seeds])
+    total = result.total_seeds
+    expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
+    chi2_result = chisquare(f_obs=observed, f_exp=expected)
+    chi2, p = chi2_result
+    return chi2, p
 
 
 def apply_chi_squared(result, expected_ratio):
@@ -38,9 +116,7 @@ def apply_chi_squared(result, expected_ratio):
     observed = np.array([result.fl_seeds, result.non_fl_seeds])
     total = result.total_seeds
     expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
-    chi2_result = chisquare(f_obs=observed, f_exp=expected)
-    print(f"chi2_result: {chi2_result}")
-    chi2, p = chi2_result
+    chi2, p = compute_chi2(observed, expected)
     result.chisquare = chi2
     result.pvalue = p
 
@@ -57,14 +133,10 @@ def build_results_csv(results):
 def get_results_rounded(results, decimals=2):
     new_results = results.copy()
     for result in results:
-        result.fl_seeds = round_if_not_none(result.fl_seeds)
-        result.non_fl_seeds = round_if_not_none(result.non_fl_seeds)
-        result.total_seeds = round_if_not_none(result.total_seeds)
-        result.ratio_fl_total = round_if_not_none(result.ratio_fl_total, decimals)
-        result.chisquare = round_if_not_none(result.chisquare, 4)
-        result.pvalue = round_if_not_none(result.pvalue, 4)
+        result.round_all(decimals)
 
     return new_results
+
 
 def round_if_not_none(num, decimals=2):
     return round(num, decimals) if num else None

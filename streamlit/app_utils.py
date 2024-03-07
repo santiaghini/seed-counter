@@ -1,22 +1,25 @@
 import os
 from datetime import datetime
 import sys
+from typing import List
 
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from utils import VALID_EXTENSIONS
+from utils import Result
 from run import process_batch
 
 BATCHES_DIR = 'batches'
 INPUT_DIR = 'input'
 OUTPUT_DIR = 'output'
 
+
 def get_batch_id():
     # generate a batch run name based on the current date and time
     return datetime.now().strftime("%Y%m%d_%H%M%S")
+
 
 def create_folders(batch_id):
     batch_dir = os.path.join(BATCHES_DIR, batch_id)
@@ -33,6 +36,20 @@ def create_folders(batch_id):
     print(f"output_dir: {output_dir}")
 
     return batch_dir, input_dir, output_dir
+
+
+def results_list_to_dict(results: List[Result]):
+    results_dict = {}
+    for result in results:
+        results_dict[result.prefix] = result
+    return results_dict
+
+
+def dict_to_results_list(results_dict):
+    results_list = []
+    for prefix, result in results_dict.items():
+        results_list.append(result)
+    return results_list
 
 
 def load_files(parsed_filenames, input_dir):
