@@ -1,22 +1,20 @@
-'''
-- [ ] Validate filenames to be sample name + suffix + extension (e.g. img1_bf.tif)
-'''
-
-import streamlit as st
-from PIL import Image
-
 import os
 import sys
+from typing import Dict, List
+
+import streamlit as st
+import pandas as pd
+from PIL import Image
+
 
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from app_utils import get_batch_id, load_files, run_batch, create_folders
-import seeds
+from app_utils import get_batch_id, load_files, run_batch, create_folders, results_list_to_dict, dict_to_results_list
 from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, INITIAL_BRIGHTNESS_THRESHOLDS
-from utils import build_results_csv, store_results, parse_filename, get_results_rounded
+from utils import build_results_csv, store_results, parse_filename, get_results_rounded, Result
 from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 
 st.set_page_config(
@@ -54,8 +52,6 @@ if 'curr_batch' not in st.session_state:
 if 'run_results' not in st.session_state:
     st.session_state.run_results = {
         'results': None,
-        'results_csv': None,
-        'results_csv_path': None,
         'output_dir': None,
     }
 
@@ -128,7 +124,7 @@ def run_for_batch(run_params, files_uploaded):
     batch_dir, input_dir, output_dir = create_folders(BATCH_ID)
 
     sample_to_files = load_files(parsed_filenames, input_dir)
-    results = None
+    results: List[Result] = None
 
     print(f"sample_to_filenames: {sample_to_files}")
 
@@ -144,20 +140,11 @@ def run_for_batch(run_params, files_uploaded):
 
     print("Results", results)
 
-    results_rounded = get_results_rounded(results, 2)
-    results_csv = build_results_csv(results_rounded)
-    results_csv_path = store_results(results_csv, output_dir, BATCH_ID)
-
-    print(f"results_csv: {results_csv}")
-
     st.session_state.run_results = {
         'results': results,
-        'results_csv': results_csv,
-        'results_csv_path': results_csv_path,
         'output_dir': output_dir,
     }
-    # if not st.session_state.has_clicked_once:
-    #     st.balloons()
+
     return 1
 
 @st.cache_data
@@ -173,9 +160,15 @@ def build_prefix_to_output_imgs(output_imgs):
     for img in output_imgs:
         prefix = os.path.basename(img).split('_')[0]
         if prefix not in prefix_to_output_imgs:
-            prefix_to_output_imgs[prefix] = [img]
+            prefix_to_output_imgs[prefix] = {
+                DEFAULT_BRIGHTFIELD_SUFFIX: None,
+                DEFAULT_FLUORESCENT_SUFFIX: None
+            }
+        if DEFAULT_BRIGHTFIELD_SUFFIX in img:
+            prefix_to_output_imgs[prefix][DEFAULT_BRIGHTFIELD_SUFFIX] = img
         else:
-            prefix_to_output_imgs[prefix].append(img)
+            prefix_to_output_imgs[prefix][DEFAULT_FLUORESCENT_SUFFIX] = img
+
     return prefix_to_output_imgs
 
 
@@ -264,16 +257,29 @@ if st.session_state.clicked_run:
 
     if run_results['results']:
 
-        st.table(run_results['results_csv'])
+        results_rounded = get_results_rounded(run_results['results'], 2)
+        results_csv = build_results_csv(results_rounded)
+        results_csv_path = store_results(results_csv, run_results['output_dir'], BATCH_ID)
+
+        print(f"results_csv: {results_csv}")
+
+        results_dict = [result.to_dict() for result in results_rounded]
+        # build pandas df from results_dict
+        df = pd.DataFrame(results_dict)
+
+        st.table(df)
 
         st.download_button(
             label="Download results as CSV",
-            data=open(run_results['results_csv_path'], 'rb'),
+            data=open(results_csv_path, 'rb'),
             file_name=f'seed_counter_{BATCH_ID}.csv',
             mime='text/csv',
         )
 
         st.header("Output Images with Seeds Highlighted")
+
+        # results list to dict
+        results_dict: Dict[str, Result] = results_list_to_dict(run_results['results'])
 
         # get all png files from output_dir
         output_imgs = get_output_imgs(run_results['output_dir'])
@@ -290,16 +296,33 @@ if st.session_state.clicked_run:
             )
 
         with col2:
-            image_paths = sorted(prefix_to_output_imgs[prefix])
+            readable_type_map = {
+                DEFAULT_BRIGHTFIELD_SUFFIX: "Brightfield",
+                DEFAULT_FLUORESCENT_SUFFIX: "Fluorescent"
+            }
+            suffix_to_key = {
+                DEFAULT_BRIGHTFIELD_SUFFIX: "total_seeds",
+                DEFAULT_FLUORESCENT_SUFFIX: "fl_seeds"
+            }
+            for img_type in [DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX]: # one for brightfield, one for fluorescent
+                image_path = prefix_to_output_imgs[prefix][img_type]
+                if image_path:
+                    image = Image.open(image_path)
+                    caption = f"{readable_type_map[img_type]} - {image_path}"
+                    st.image(image, caption=caption, width=500)
 
-            for image_path in image_paths:
-                image = Image.open(image_path)
-                caption = f"{'Fluorescent' if 'FL' in image_path else 'Brightfield'} - {image_path}"
-                st.image(image, caption=caption, width=500)
+                value = results_dict[prefix].__getattribute__(suffix_to_key[img_type])
 
+                old_value = suffix_to_key[img_type]
 
-############# STEP: LOADING #############
+                new_value = st.number_input(f"Manually override {suffix_to_key[img_type]} value:", value=value, placeholder="Type a number", step=1, key=image_path)
 
-
-
-############# STEP: RESULTS #############
+                if new_value != value:
+                    print(f"Updated value for {prefix} - {suffix_to_key[img_type]}: {new_value}")
+                    results_dict[prefix].__setattr__(suffix_to_key[img_type], new_value)
+                    new_results = dict_to_results_list(results_dict)
+                    st.session_state.run_results = {
+                        'results': new_results,
+                        'output_dir': run_results['output_dir'],
+                    }
+                    st.rerun()
