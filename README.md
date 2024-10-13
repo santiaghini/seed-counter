@@ -47,7 +47,7 @@ python run.py --dir ./images --output ./output_directory --intensity_thresh 30,3
 ```
 - `-d, --dir`: directory with input images with the specified format (required).
 - `-o, --output`: output directory to store results (required).
-- `-n, --nostore`: flag, if present, does not store the processed images with contours for counting.
+- `-n, --nostore`: flag, if present, does not store the processed images with contours for counting, only the final results in .csv format. Default is `False`.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
 - `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
 - `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are capture versus how much seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() bellow to tune this value. By default this value is set automatically using the median seed area in the image.

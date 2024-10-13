@@ -2,9 +2,12 @@ import argparse
 from datetime import datetime
 import os
 
-from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, TARGET_RATIO
+from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, INITIAL_BRIGHTNESS_THRESHOLDS
 from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, parse_filename, get_results_rounded
 from seeds import process_seed_image
+
+DEFAULT_BRIGHTFIELD_THESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX]
+DEFAULT_FLUORESCENT_THRESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX]
 
 def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None, plot=False):
     bf_suffix = bf_suffix or DEFAULT_BRIGHTFIELD_SUFFIX
@@ -46,33 +49,26 @@ def parse_args():
     help_message = (
         "This script takes an image or directory of images and returns the number of seeds in the image(s)."
     )
-    parser = argparse.ArgumentParser(description=help_message)
-    parser.add_argument('-d', '--dir', type=str, help='Path to the image directory', required=True)
-    parser.add_argument('-o', '--output', type=str, help='Path to the output directory', required=True)
-    parser.add_argument('-n', '--nostore', action='store_true', help='Do not store contour images')
-    parser.add_argument('-p', '--plot', action='store_true', help='Plot images')
-    parser.add_argument('-t', '--intensity_thresh', type=str, help='Intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 30,30')
-    parser.add_argument('-r', '--radial_thresh', type=float, help='Radial threshold to capture seeds')
-    parser.add_argument('-s', '--img_type_suffix', type=str, help='Image type suffix. Format is <brightfield_suffix>,<fluorescent_suffix>. Example: BF,FL')
+    parser = argparse.ArgumentParser(description=help_message, argument_default=argparse.SUPPRESS)
+    parser.add_argument('-d', '--dir', type=str, help='Path to the image directory. Required', required=True)
+    parser.add_argument('-o', '--output', type=str, help='Path to the output directory. Required', required=True)
+    parser.add_argument('-n', '--nostore', action='store_true', help='Do not store output images in output directory (but still store results .csv file)', default=False)
+    parser.add_argument('-p', '--plot', action='store_true', help='Plot images', default=False)
+    parser.add_argument('-t', '--intensity_thresh', type=str, help='Intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: "30,30". Default: "%(default)s"', default=f"{DEFAULT_BRIGHTFIELD_THESHOLD},{DEFAULT_FLUORESCENT_THRESHOLD}")
+    parser.add_argument('-r', '--radial_thresh', type=float, help='Radial threshold to capture seeds. If not given, this value is set by taking the median area as a reference.', default=None)
+    parser.add_argument('-s', '--img_type_suffix', type=str, help='Image type suffix. Format is <brightfield_suffix>,<fluorescent_suffix>. Example: BF,FL. Default: "%(default)s"', default=f"{DEFAULT_BRIGHTFIELD_SUFFIX},{DEFAULT_FLUORESCENT_SUFFIX}")
 
     args = parser.parse_args()
 
-    # Initialize bf_suffix and fl_suffix
-    bf_suffix, fl_suffix = None, None
-
-    # parse intensity thresholds
-    bf_thresh, fl_thresh = None, None
-    if args.intensity_thresh:
-        try:
-            bf_thresh, fl_thresh = [int(x) for x in args.intensity_thresh.split(',')]
-        except:
-            raise Exception('Invalid intensity threshold format. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 60,60')
+    try:
+        bf_thresh, fl_thresh = [int(x) for x in args.intensity_thresh.split(',')]
+    except:
+        raise Exception('Invalid intensity threshold format. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: 60,60')
         
-    if args.img_type_suffix:
-        try:
-            bf_suffix, fl_suffix = args.img_type_suffix.split(',')
-        except:
-            raise Exception('Invalid image type suffix format. Format is <brightfield_suffix>,<fluorescent_suffix>. Example: BF,FL')
+    try:
+        bf_suffix, fl_suffix = args.img_type_suffix.split(',')
+    except:
+        raise Exception('Invalid image type suffix format. Format is <brightfield_suffix>,<fluorescent_suffix>. Example: BF,FL')
 
     return args, bf_thresh, fl_thresh, bf_suffix, fl_suffix
 
@@ -103,9 +99,6 @@ def collect_img_files(input_dir, bf_suffix, fl_suffix):
 
 if __name__ == "__main__":
     args, bf_thresh, fl_thresh, bf_suffix, fl_suffix = parse_args()
-
-    bf_suffix = bf_suffix or DEFAULT_BRIGHTFIELD_SUFFIX
-    fl_suffix = fl_suffix or DEFAULT_FLUORESCENT_SUFFIX
 
     print_welcome_msg()
 
