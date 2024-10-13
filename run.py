@@ -6,12 +6,10 @@ from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, TARGE
 from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, parse_filename, get_results_rounded
 from seeds import process_seed_image
 
-def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None):
-    if not bf_suffix:
-        bf_suffix = DEFAULT_BRIGHTFIELD_SUFFIX
-    if not fl_suffix:
-        fl_suffix = DEFAULT_FLUORESCENT_SUFFIX
-
+def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None, plot=False):
+    bf_suffix = bf_suffix or DEFAULT_BRIGHTFIELD_SUFFIX
+    fl_suffix = fl_suffix or DEFAULT_FLUORESCENT_SUFFIX
+    
     results = []
     for i, sample_name in enumerate(sorted(sample_to_files.keys())):
         yield f'Processing sample {sample_name} ({i+1} of {len(sample_to_files.keys())}):'
@@ -24,12 +22,12 @@ def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_ou
             if img_type == bf_suffix:
                 yield f'\t{bf_suffix} (brightfield) image: {filename}'
                 img_type_name = DEFAULT_BRIGHTFIELD_SUFFIX
-                total_seeds = process_seed_image(file_path, img_type_name, sample_name, bf_thresh, radial_thresh, batch_output_dir)
+                total_seeds = process_seed_image(file_path, img_type_name, sample_name, bf_thresh, radial_thresh, batch_output_dir, plot=plot)
                 result.total_seeds = total_seeds
             elif img_type == fl_suffix:
                 yield f'\t{fl_suffix} (fluorescent) image: {filename}'
                 img_type_name = DEFAULT_FLUORESCENT_SUFFIX
-                fl_seeds = process_seed_image(file_path, img_type_name, sample_name, fl_thresh, radial_thresh, batch_output_dir)
+                fl_seeds = process_seed_image(file_path, img_type_name, sample_name, fl_thresh, radial_thresh, batch_output_dir, plot=plot)
                 result.fl_seeds = fl_seeds
             else:
                 yield f'\tUnknown image type for {filename}'
@@ -59,6 +57,9 @@ def parse_args():
 
     args = parser.parse_args()
 
+    # Initialize bf_suffix and fl_suffix
+    bf_suffix, fl_suffix = None, None
+
     # parse intensity thresholds
     bf_thresh, fl_thresh = None, None
     if args.intensity_thresh:
@@ -81,10 +82,10 @@ def print_welcome_msg():
     print()
 
 
-def collect_img_files(input_dir):
+def collect_img_files(input_dir, bf_suffix, fl_suffix):
     file_names = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and os.path.splitext(f)[-1].lower() in VALID_EXTENSIONS]
 
-    sample_to_files = []
+    sample_to_files = {}
     for filename in file_names:
         sample_name, img_type = parse_filename(filename, bf_suffix, fl_suffix)
         file_obj = {
@@ -95,7 +96,7 @@ def collect_img_files(input_dir):
         if sample_name not in sample_to_files:
             sample_to_files[sample_name] = [file_obj]
         else:
-            sample_to_files[sample_name] = [file_obj]
+            sample_to_files[sample_name].append(file_obj)
 
     return sample_to_files, file_names
 
@@ -103,8 +104,8 @@ def collect_img_files(input_dir):
 if __name__ == "__main__":
     args, bf_thresh, fl_thresh, bf_suffix, fl_suffix = parse_args()
 
-    bf_suffix = DEFAULT_BRIGHTFIELD_SUFFIX if not bf_suffix else bf_suffix
-    fl_suffix = DEFAULT_FLUORESCENT_SUFFIX if not fl_suffix else fl_suffix
+    bf_suffix = bf_suffix or DEFAULT_BRIGHTFIELD_SUFFIX
+    fl_suffix = fl_suffix or DEFAULT_FLUORESCENT_SUFFIX
 
     print_welcome_msg()
 
@@ -113,7 +114,7 @@ if __name__ == "__main__":
 
     # Call the process_image function with the specified image path
     results = []
-    for message in process_batch(sample_to_files, bf_thresh, fl_thresh, args.radial_thresh, args.output, bf_suffix=bf_suffix, fl_suffix=fl_suffix):
+    for message in process_batch(sample_to_files, bf_thresh, fl_thresh, args.radial_thresh, args.output, bf_suffix=bf_suffix, fl_suffix=fl_suffix, plot=args.plot):
         if type(message) == str:
             print(message)
         else:
@@ -121,6 +122,6 @@ if __name__ == "__main__":
 
     results_rounded = get_results_rounded(results, 2)
     results_csv = build_results_csv(results_rounded)
-    store_results(results_csv, args.output) ###
+    store_results(results_csv, args.output)
 
     print("Thanks for your visit!")
