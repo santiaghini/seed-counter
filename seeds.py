@@ -31,6 +31,9 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     # Eliminate scale bar
     gray[-50:, :500] = 0
 
+    if plot:
+        plot_full(gray, 'Grayscale image', cmap='gray')
+
     # Threshold the unique channel image to isolate bright regions
     _, thresholded = cv2.threshold(gray, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
 
@@ -39,6 +42,9 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
+
+    if plot:
+        plot_full(thresholded, 'Thresholded image')
 
     ####### START Filter small areas
     # Get indices of all areas smaller than SMALL_AREA
@@ -56,6 +62,9 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
+
+    if plot:
+        plot_full(thresholded, 'Thresholded image (filtered small areas)')
 
     ####### START Obtain and verify median area
     median_area = np.median(areas)
