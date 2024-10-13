@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 from config import INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX
-from utils import plot_full
+from utils import plot_all, plot_full
 
 
 REF_RADIAL_THRESH = 8
@@ -15,6 +16,8 @@ def get_radial_thresh(median_area):
 
 
 def process_seed_image(image_path, img_type, sample_name, initial_brightness_thresh, radial_threshold, output_dir=None, plot=False):
+    plots = []  # List to store images and titles for plotting
+
     if img_type not in [DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX]:
         raise Exception(f'Image type must be either {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) or {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent)')
     
@@ -32,7 +35,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     gray[-50:, :500] = 0
 
     if plot:
-        plot_full(gray, 'Grayscale image', cmap='gray')
+        plots.append((gray, 'Grayscale image', 'gray'))
 
     # Threshold the unique channel image to isolate bright regions
     _, thresholded = cv2.threshold(gray, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
@@ -44,7 +47,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     areas = stats[1:, cv2.CC_STAT_AREA]
 
     if plot:
-        plot_full(thresholded, 'Thresholded image')
+        plots.append((thresholded, 'Thresholded image', None))
 
     ####### START Filter small areas
     # Get indices of all areas smaller than SMALL_AREA
@@ -64,7 +67,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     areas = stats[1:, cv2.CC_STAT_AREA]
 
     if plot:
-        plot_full(thresholded, 'Thresholded image (filtered small areas)')
+        plots.append((thresholded, 'Thresholded image (filtered small areas)', None))
 
     ####### START Obtain and verify median area
     median_area = np.median(areas)
@@ -79,7 +82,8 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     median_area_mask = np.zeros(thresholded.shape, dtype="uint8")
     median_area_mask[labels == median_area_label] = 255
     if plot:
-        plot_full(median_area_mask, 'Median area mask')
+        plots.append((median_area_mask, 'Median area mask', 'gray'))
+
     ####### END Get median area and verify
 
     # noise removal
@@ -161,7 +165,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     # Plot the final sure foreground (count of seeds is computed from these)
     image_final_components = cv2.cvtColor(final_sure_fg, cv2.COLOR_BGR2RGB)
     if plot:
-        plot_full(image_final_components, 'Final sure foreground (count of seeds is computed from these)')
+        plots.append((image_final_components, 'Final sure foreground (count of seeds is computed from these)', None))
 
     ####### START Watershed (for visualization only)
     unknown = cv2.subtract(sure_bg, final_sure_fg)
@@ -173,9 +177,8 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     markers = cv2.watershed(image,markers)
     ####### END Watershed
 
-    # Plot markers
     if plot:
-        plot_full(markers, 'Markers')
+        plots.append((markers, 'Markers', None))
     
     # Increase margin of markers to 3 pixels
     kernel = np.ones((7,7),np.uint8)
@@ -187,11 +190,15 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     # Plot the original image with contours
     image_with_contours = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if plot:
-        plot_full(image_with_contours, 'Image with contours')
+        plots.append((image_with_contours, 'Image with contours', None))
 
     if output_dir is not None:
         cv2.imwrite(f'{output_dir}/{sample_name}_{img_type}_contours.png', image)
     
+    # Plot all images at once
+    if plot:
+        plot_all(plots)
+
     # Return the number of seeds
     return num_seeds
 

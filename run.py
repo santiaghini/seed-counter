@@ -1,5 +1,4 @@
 import argparse
-from datetime import datetime
 import os
 
 from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, INITIAL_BRIGHTNESS_THRESHOLDS
