@@ -28,8 +28,6 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     if img_type == DEFAULT_BRIGHTFIELD_SUFFIX:
         gray = cv2.bitwise_not(gray)
 
-    # contrasted = cv2.equalizeHist(gray)
-
     # Eliminate scale bar
     gray[-50:, :500] = 0
 
@@ -44,7 +42,6 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
 
     ####### START Filter small areas
     # Get indices of all areas smaller than SMALL_AREA
-    # small_area_threshold = median_area * 
     idxs_small_area = np.where(areas < SMALL_AREA_PRE_PASS)[0] + 1
 
     # Create a mask for small areas
@@ -90,7 +87,6 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     if not radial_threshold:
         radial_threshold = get_radial_thresh(median_area)
     # Get centers of components from threshold
-    # ret, sure_fg = cv2.threshold(dist_transform,0.6*dist_transform.max(),255,0)
     ret, sure_fg = cv2.threshold(dist_transform, radial_threshold, 255, 0)
     
     ####### START Second pass on large areas
@@ -113,7 +109,6 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     # Perform a distance transform on the component
     dist_transform = cv2.distanceTransform(component_mask, cv2.DIST_L2, 5)
 
-    # _, thresh = cv2.threshold(dist_transform, 0.6*dist_transform.max(), 255, 0)
     _, thresh = cv2.threshold(dist_transform, 0.3*dist_transform.max(), 255, 0)
 
     # Convert sure_fg back to 8-bit
@@ -167,6 +162,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
     markers[unknown==255] = 0
     # Perform watershed
     markers = cv2.watershed(image,markers)
+    ####### END Watershed
 
     # Plot markers
     if plot:
