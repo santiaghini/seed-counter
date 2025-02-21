@@ -7,7 +7,7 @@ You should upload these pairs of images following the following convention:
 
 `<sample>_<image_type>.<extension>`
 - `sample`: name/ID for the sample being analyzed, each image pair (fluorescent + brightfield) in the sample should have the same prefix.
-- `image_type`: either `FL` (fluorescent image) or `BF` (brightfield image)
+- `image_type`: either `FL` (fluorescent image) or `BF` (brightfield image) - suffix can be changed in "Parameters for manual setup"
 - `extension`: extension of the image (usually `.tif`)
 
 Example `VZ254_BF.tif` and `VZ254_FL.tif`
