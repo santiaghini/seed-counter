@@ -239,7 +239,7 @@ with st.expander("**Parameters for manual setup**"):
         st.markdown(PARAM_HINTS)
 
 ### RUN BUTTON
-st.button("Run Seed Counter", disabled=not uploaded_files, on_click=click_run_button)
+st.button("Run SeedCounter", disabled=not uploaded_files, on_click=click_run_button)
 if st.session_state.clicked_run:
     print(f"uploaded_files: {uploaded_files}")
 
