@@ -174,7 +174,8 @@ def build_prefix_to_output_imgs(output_imgs):
 
 ##########################           UI           ##########################
 
-st.title(":seedling: Seed Counter by Brophy Lab")
+st.title(":seedling: SeedCounter")
+st.subheader("The Brophy Lab's automated seed counting app")
 
 st.markdown("[Link to GitHub Repo](https://github.com/santiaghini/seed-counter)")
 
