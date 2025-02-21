@@ -18,7 +18,7 @@ from utils import build_results_csv, store_results, parse_filename, get_results_
 from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 
 st.set_page_config(
-    page_title='Seed Counter by Brophy Lab',
+    page_title='SeedCounter by the Brophy Lab', menu_items={"About": "Run by the Brophy Lab", "Report a Bug": "mailto:jbrophy@stanford.edu", "Get help": None}
     page_icon=':seedling:',
     # layout='wide'
 )
