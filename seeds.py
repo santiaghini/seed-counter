@@ -193,7 +193,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
         plots.append((image_with_contours, 'Image with contours', None))
 
     if output_dir is not None:
-        cv2.imwrite(f'{output_dir}/{sample_name}_{img_type}_contours.png', image)
+        cv2.imwrite(f'{output_dir}/{sample_name}_{img_type}_brightness{initial_brightness_thresh}_radial{radial_threshold}_contours.png', image)
     
     # Plot all images at once
     if plot:
