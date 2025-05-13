@@ -25,7 +25,7 @@ st.set_page_config(
 
 ##########################           GLOBALS           ##########################
 RADIAL_THRESH_DEFAULT = 12
-RADIAL_THRESH_RANGE = (6, 20)
+RADIAL_THRESH_RANGE = (6, 25)
 
 BATCH_ID = None
 RUN_PARAMS = {
