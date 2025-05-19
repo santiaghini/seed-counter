@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,13 +12,24 @@ REF_RADIAL_THRESH = 8
 REF_MEDIAN_AREA = 1250
 
 
-def get_radial_thresh(median_area):
+def get_radial_thresh(median_area: float) -> float:
+    """Return a radial threshold scaled to ``median_area``."""
     radial_thresh = median_area * REF_RADIAL_THRESH / REF_MEDIAN_AREA
-    return radial_thresh
+    return float(radial_thresh)
 
 
-def process_seed_image(image_path, img_type, sample_name, initial_brightness_thresh, radial_threshold, output_dir=None, plot=False):
-    plots = []  # List to store images and titles for plotting
+def process_seed_image(
+    image_path: str,
+    img_type: str,
+    sample_name: str,
+    initial_brightness_thresh: int | None,
+    radial_threshold: float | None,
+    output_dir: str | None = None,
+    plot: bool = False,
+) -> int:
+    """Process ``image_path`` and return the number of detected seeds."""
+
+    plots: list[tuple[np.ndarray, str, str | None]] = []
 
     if img_type not in [DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX]:
         raise Exception(f'Image type must be either {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) or {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent)')
@@ -204,7 +217,7 @@ def process_seed_image(image_path, img_type, sample_name, initial_brightness_thr
 
 
 # Method for counting seeds based on brightness at the center of the seed (useful when brightness changes outwards from center)
-def count_seeds(image_path):
+def count_seeds(image_path: str) -> int:
     # Load the image
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
@@ -221,4 +234,4 @@ def count_seeds(image_path):
 
     num_seeds = num_labels - 1
 
-    return num_seeds
+    return int(num_seeds)

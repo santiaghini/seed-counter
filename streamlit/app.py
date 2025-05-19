@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import os
 import sys
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 import pandas as pd
 from PIL import Image
 
@@ -79,7 +82,7 @@ if 'has_clicked_once' not in st.session_state:
 
 ##########################           LOGIC           ##########################
 
-def clear():
+def clear() -> None:
     st.session_state.logs_content = ""
     st.session_state.run_results = {
         'results': None,
@@ -88,11 +91,11 @@ def clear():
         'output_dir': None,
     }
 
-def click_reset_button():
+def click_reset_button() -> None:
     st.session_state.clicked_run = False
     clear()
 
-def click_run_button():
+def click_run_button() -> None:
     success = run_for_batch(RUN_PARAMS, uploaded_files)
     if success and not st.session_state.clicked_run:
         st.session_state.clicked_run = True
@@ -101,7 +104,7 @@ def click_run_button():
         st.session_state.has_clicked_once = True
 
 @st.cache_data
-def run_for_batch(run_params, files_uploaded):
+def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]) -> int:
     parsed_filenames = []
     for f in files_uploaded:
         try:
@@ -148,14 +151,14 @@ def run_for_batch(run_params, files_uploaded):
     return 1
 
 @st.cache_data
-def get_output_imgs(output_dir):
+def get_output_imgs(output_dir: str) -> List[str]:
     return [
         os.path.join(output_dir, f) for f in os.listdir(output_dir)
         if os.path.isfile(os.path.join(output_dir, f)) and f.endswith('.png')
     ]
 
 @st.cache_data
-def build_prefix_to_output_imgs(output_imgs):
+def build_prefix_to_output_imgs(output_imgs: List[str]) -> Dict[str, Dict[str, str | None]]:
     prefix_to_output_imgs = {}
     for img in output_imgs:
         prefix = os.path.basename(img).split('_')[0]

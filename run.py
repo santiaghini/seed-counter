@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import os
 
@@ -8,7 +10,19 @@ from seeds import process_seed_image
 DEFAULT_BRIGHTFIELD_THESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX]
 DEFAULT_FLUORESCENT_THRESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX]
 
-def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None, plot=False):
+from typing import Dict, Iterable, Iterator, List, Tuple
+
+
+def process_batch(
+    sample_to_files: Dict[str, List[Dict[str, str]]],
+    bf_thresh: int,
+    fl_thresh: int,
+    radial_thresh: float | None,
+    batch_output_dir: str | None,
+    bf_suffix: str | None = None,
+    fl_suffix: str | None = None,
+    plot: bool = False,
+) -> Iterator[str | List[Result]]:
     """Process a batch of images and optionally store intermediate outputs.
 
     Parameters
@@ -63,7 +77,7 @@ def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_ou
     yield results
 
 
-def parse_args():
+def parse_args() -> tuple[argparse.Namespace, int, int, str, str]:
     help_message = (
         "This script takes an image or directory of images and returns the number of seeds in the image(s)."
     )
@@ -90,13 +104,17 @@ def parse_args():
 
     return args, bf_thresh, fl_thresh, bf_suffix, fl_suffix
 
-def print_welcome_msg():
+def print_welcome_msg() -> None:
     print(f'Welcome to Seed Counter!')
     print(f'Make sure that your images are in the input directory in pairs: a {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) image and a {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent) image. For example, for "img1" you need to have two images: img1_{DEFAULT_BRIGHTFIELD_SUFFIX}.tif and img1_{DEFAULT_FLUORESCENT_SUFFIX}.tif')
     print()
 
 
-def collect_img_files(input_dir, bf_suffix, fl_suffix):
+def collect_img_files(
+    input_dir: str,
+    bf_suffix: str,
+    fl_suffix: str,
+) -> tuple[Dict[str, List[Dict[str, str]]], List[str]]:
     file_names = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and os.path.splitext(f)[-1].lower() in VALID_EXTENSIONS]
 
     sample_to_files = {}
