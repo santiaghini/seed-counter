@@ -139,17 +139,6 @@ def compute_chi2(result, expected_ratio):
     return chi2, p
 
 
-def apply_chi_squared(result, expected_ratio):
-    if result.fl_seeds == None or result.non_fl_seeds == None:
-        return
-    observed = np.array([result.fl_seeds, result.non_fl_seeds])
-    total = result.total_seeds
-    expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
-    chi2, p = compute_chi2(observed, expected)
-    result.chisquare = chi2
-    result.pvalue = p
-
-
 def build_results_csv(results):
     col_names = ['sample', 'fl_seeds', 'non_fl_seeds', 'total_seeds', 'ratio_fl_total', 'chisquare', 'pvalue']
     rows = [col_names]
@@ -168,7 +157,7 @@ def get_results_rounded(results, decimals=2):
 
 
 def round_if_not_none(num, decimals=2):
-    return round(num, decimals) if num else None
+    return round(num, decimals) if num is not None else None
 
 
 def store_results(results_csv, batch_output_dir, batch_id=None, filename=None):
