@@ -9,6 +9,25 @@ DEFAULT_BRIGHTFIELD_THESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD
 DEFAULT_FLUORESCENT_THRESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX]
 
 def process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, batch_output_dir, bf_suffix=None, fl_suffix=None, plot=False):
+    """Process a batch of images and optionally store intermediate outputs.
+
+    Parameters
+    ----------
+    sample_to_files : dict
+        Mapping of sample names to image file info.
+    bf_thresh, fl_thresh : int
+        Brightfield and fluorescent intensity thresholds.
+    radial_thresh : float
+        Radial threshold for seed segmentation.
+    batch_output_dir : str or None
+        Directory to save intermediate images. If ``None`` intermediate
+        images are not saved.
+    bf_suffix, fl_suffix : str, optional
+        Suffixes identifying brightfield and fluorescent images.
+    plot : bool, optional
+        Display plots of intermediate steps.
+    """
+
     bf_suffix = bf_suffix or DEFAULT_BRIGHTFIELD_SUFFIX
     fl_suffix = fl_suffix or DEFAULT_FLUORESCENT_SUFFIX
     
@@ -104,9 +123,20 @@ if __name__ == "__main__":
     sample_to_files, file_names = collect_img_files(args.dir, bf_suffix, fl_suffix)
     print(f'Found {len(sample_to_files.keys())} unique prefixes in {len(file_names)} files')
 
-    # Call the process_image function with the specified image path
+    # Determine whether to store intermediate images
+    img_output_dir = None if args.nostore else args.output
+
+    # Process each image pair
     results = []
-    for message in process_batch(sample_to_files, bf_thresh, fl_thresh, args.radial_thresh, args.output, bf_suffix=bf_suffix, fl_suffix=fl_suffix, plot=args.plot):
+    for message in process_batch(
+            sample_to_files,
+            bf_thresh,
+            fl_thresh,
+            args.radial_thresh,
+            img_output_dir,
+            bf_suffix=bf_suffix,
+            fl_suffix=fl_suffix,
+            plot=args.plot):
         if type(message) == str:
             print(message)
         else:
@@ -114,6 +144,8 @@ if __name__ == "__main__":
 
     results_rounded = get_results_rounded(results, 2)
     results_csv = build_results_csv(results_rounded)
+
+    # Results CSV is always stored in the output directory
     store_results(results_csv, args.output)
 
     print("Thanks for your visit!")
