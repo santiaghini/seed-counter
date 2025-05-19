@@ -4,12 +4,51 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from config import INITIAL_BRIGHTNESS_THRESHOLDS, SMALL_AREA_PRE_PASS, DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX
+from config import (
+    INITIAL_BRIGHTNESS_THRESHOLDS,
+    SMALL_AREA_PRE_PASS,
+    DEFAULT_BRIGHTFIELD_SUFFIX,
+    DEFAULT_FLUORESCENT_SUFFIX,
+)
 from utils import plot_all, plot_full
 
 
 REF_RADIAL_THRESH = 8
 REF_MEDIAN_AREA = 1250
+
+
+def mask_by_color(
+    image: np.ndarray,
+    rgb_color: tuple[int, int, int],
+    h_margin: int = 10,
+    sv_margin: int = 80,
+) -> np.ndarray:
+    """Return ``image`` masked by pixels close to ``rgb_color``.
+
+    The color range is computed in HSV space because it is more robust for
+    segmentation by color. OpenCV uses the hue range [0, 179] for 8-bit images,
+    hence the cap at 179 when expanding the hue margin.
+    """
+
+    color_bgr = np.uint8([[rgb_color[::-1]]])  # OpenCV uses BGR ordering
+    color_hsv = cv2.cvtColor(color_bgr, cv2.COLOR_BGR2HSV)[0][0]
+    lower = np.array(
+        [
+            max(color_hsv[0] - h_margin, 0),
+            max(color_hsv[1] - sv_margin, 0),
+            max(color_hsv[2] - sv_margin, 0),
+        ]
+    )
+    upper = np.array(
+        [
+            min(color_hsv[0] + h_margin, 179),  # Hue max value is 179 in OpenCV
+            min(color_hsv[1] + sv_margin, 255),
+            min(color_hsv[2] + sv_margin, 255),
+        ]
+    )
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, lower, upper)
+    return cv2.bitwise_and(image, image, mask=mask)
 
 
 def get_radial_thresh(median_area: float) -> float:
@@ -19,15 +58,17 @@ def get_radial_thresh(median_area: float) -> float:
 
 
 def process_seed_image(
-    image_path: str,
+    image_path: str | None,
     img_type: str,
     sample_name: str,
     initial_brightness_thresh: int | None,
     radial_threshold: float | None,
     output_dir: str | None = None,
     plot: bool = False,
+    *,
+    image: np.ndarray | None = None,
 ) -> int:
-    """Process ``image_path`` and return the number of detected seeds."""
+    """Process ``image_path`` or ``image`` and return the number of detected seeds."""
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
 
@@ -38,7 +79,10 @@ def process_seed_image(
         initial_brightness_thresh = INITIAL_BRIGHTNESS_THRESHOLDS[img_type]
     
     # Load the image
-    image = cv2.imread(image_path)
+    if image is None:
+        if image_path is None:
+            raise ValueError('Either image_path or image must be provided')
+        image = cv2.imread(image_path)
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     if img_type == DEFAULT_BRIGHTFIELD_SUFFIX:
@@ -214,6 +258,42 @@ def process_seed_image(
 
     # Return the number of seeds
     return num_seeds
+
+
+def process_color_image(
+    image_path: str,
+    sample_name: str,
+    rgb_color: tuple[int, int, int],
+    bf_thresh: int,
+    fl_thresh: int,
+    radial_thresh: float | None,
+    output_dir: str | None = None,
+    plot: bool = False,
+) -> tuple[int, int]:
+    """Process a single RGB image for total and colored seeds."""
+    total = process_seed_image(
+        image_path,
+        DEFAULT_BRIGHTFIELD_SUFFIX,
+        sample_name,
+        bf_thresh,
+        radial_thresh,
+        output_dir,
+        plot=plot,
+    )
+
+    original = cv2.imread(image_path)
+    masked = mask_by_color(original, rgb_color)
+    colored = process_seed_image(
+        None,
+        DEFAULT_FLUORESCENT_SUFFIX,
+        sample_name,
+        fl_thresh,
+        radial_thresh,
+        output_dir,
+        plot=plot,
+        image=masked,
+    )
+    return total, colored
 
 
 # Method for counting seeds based on brightness at the center of the seed (useful when brightness changes outwards from center)

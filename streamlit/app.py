@@ -15,9 +15,26 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from app_utils import get_batch_id, load_files, run_batch, create_folders, results_list_to_dict, dict_to_results_list
-from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, INITIAL_BRIGHTNESS_THRESHOLDS
-from utils import build_results_csv, store_results, parse_filename, get_results_rounded, Result
+from app_utils import (
+    get_batch_id,
+    load_files,
+    run_batch,
+    create_folders,
+    results_list_to_dict,
+    dict_to_results_list,
+)
+from config import (
+    DEFAULT_BRIGHTFIELD_SUFFIX,
+    DEFAULT_FLUORESCENT_SUFFIX,
+    INITIAL_BRIGHTNESS_THRESHOLDS,
+)
+from utils import (
+    build_results_csv,
+    store_results,
+    parse_filename,
+    get_results_rounded,
+    Result,
+)
 from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 
 st.set_page_config(
@@ -36,7 +53,9 @@ RUN_PARAMS = {
     'fl_suffix': None,
     'bf_intensity_thresh': None,
     'fl_intensity_thresh': None,
-    'radial_thresh': None
+    'radial_thresh': None,
+    'mode': 'fluorescence',
+    'marker_color': '#ff0000',
 }
 PREFIX_TO_FILENAMES = None
 
@@ -108,14 +127,28 @@ def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]
     parsed_filenames = []
     for f in files_uploaded:
         try:
-            sample_name, img_type = parse_filename(f.name, run_params['bf_suffix'], run_params['fl_suffix'])
-            parsed_filenames.append({
-                    'file_name': f.name,
-                    'sample_name': sample_name,
-                    'img_type': img_type,
-                    'file': f
-                }
-            )
+            if run_params['mode'] == 'fluorescence':
+                sample_name, img_type = parse_filename(
+                    f.name, run_params['bf_suffix'], run_params['fl_suffix']
+                )
+                parsed_filenames.append(
+                    {
+                        'file_name': f.name,
+                        'sample_name': sample_name,
+                        'img_type': img_type,
+                        'file': f,
+                    }
+                )
+            else:
+                sample_name = f.name.split('.')[0]
+                parsed_filenames.append(
+                    {
+                        'file_name': f.name,
+                        'sample_name': sample_name,
+                        'img_type': None,
+                        'file': f,
+                    }
+                )
 
         except Exception as e:
             st.error(e)
@@ -126,7 +159,7 @@ def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]
     BATCH_ID = get_batch_id()
     batch_dir, input_dir, output_dir = create_folders(BATCH_ID)
 
-    sample_to_files = load_files(parsed_filenames, input_dir)
+    sample_to_files = load_files(parsed_filenames, input_dir, run_params['mode'])
     results: List[Result] = None
 
     print(f"sample_to_filenames: {sample_to_files}")
@@ -196,10 +229,18 @@ with st.expander("**Instructions** (click to expand)"):
 
 st.header("Upload your images")
 
+mode_option = st.radio("Select counting mode", ["Fluorescence", "Color"], horizontal=True)
+RUN_PARAMS['mode'] = 'fluorescence' if mode_option == 'Fluorescence' else 'color'
+
+if RUN_PARAMS['mode'] == 'fluorescence':
+    uploader_text = "Upload files with the format <sample_name>_<img_type>.tif"
+else:
+    uploader_text = "Upload RGB images. File name is used as sample name"
+
 if st.session_state.clicked_run:
     st.button("Reset", on_click=click_reset_button)
 
-uploaded_files = st.file_uploader("Upload files with the format <sample_name>_<img_type>.tif", accept_multiple_files=True)
+uploaded_files = st.file_uploader(uploader_text, accept_multiple_files=True)
 
 st.markdown(":gray[*Pro Tip: To clear all uploaded files, reload the page.*]")
 
@@ -214,28 +255,30 @@ with st.expander("**Parameters for manual setup**"):
 
     suff_col1, suff_col2 = st.columns(2)
     with suff_col1:
-        RUN_PARAMS['bf_suffix'] = st.text_input('Brightfield suffix', value=DEFAULT_BRIGHTFIELD_SUFFIX)
+        RUN_PARAMS['bf_suffix'] = st.text_input('Brightfield suffix', value=DEFAULT_BRIGHTFIELD_SUFFIX, disabled=RUN_PARAMS['mode']!='fluorescence')
         RUN_PARAMS['bf_intensity_thresh'] = st.slider(
-            'Brightfield Intensity Threshold', 
-            0, 
-            255, 
+            'Brightfield Intensity Threshold',
+            0,
+            255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX]
         )
         RUN_PARAMS['radial_thresh'] = st.slider(
-            'Radial Threshold', 
-            th_min, 
-            th_max, 
+            'Radial Threshold',
+            th_min,
+            th_max,
             RADIAL_THRESH_DEFAULT
         )
-        
+
     with suff_col2:
-        RUN_PARAMS['fl_suffix'] = st.text_input('Fluorescent suffix', value=DEFAULT_FLUORESCENT_SUFFIX)
+        RUN_PARAMS['fl_suffix'] = st.text_input('Fluorescent suffix', value=DEFAULT_FLUORESCENT_SUFFIX, disabled=RUN_PARAMS['mode']!='fluorescence')
         RUN_PARAMS['fl_intensity_thresh'] = st.slider(
-            'Fluorescent Intensity Threshold', 
-            0, 
-            255, 
+            'Fluorescent Intensity Threshold',
+            0,
+            255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX]
         )
+        if RUN_PARAMS['mode'] == 'color':
+            RUN_PARAMS['marker_color'] = st.color_picker('Marker color', value=RUN_PARAMS['marker_color'])
     
 
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):

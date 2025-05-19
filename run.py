@@ -3,14 +3,31 @@ from __future__ import annotations
 import argparse
 import os
 
-from config import DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX, INITIAL_BRIGHTNESS_THRESHOLDS
-from utils import build_results_csv, store_results, VALID_EXTENSIONS, Result, parse_filename, get_results_rounded
-from seeds import process_seed_image
+from config import (
+    DEFAULT_BRIGHTFIELD_SUFFIX,
+    DEFAULT_FLUORESCENT_SUFFIX,
+    INITIAL_BRIGHTNESS_THRESHOLDS,
+)
+from utils import (
+    build_results_csv,
+    store_results,
+    VALID_EXTENSIONS,
+    Result,
+    parse_filename,
+    get_results_rounded,
+)
+from seeds import process_seed_image, process_color_image
 
 DEFAULT_BRIGHTFIELD_THESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX]
 DEFAULT_FLUORESCENT_THRESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX]
 
 from typing import Dict, Iterable, Iterator, List, Tuple
+from PIL import ImageColor
+
+
+def hex_to_rgb(color: str) -> Tuple[int, int, int]:
+    """Convert a hex color string to an RGB tuple."""
+    return ImageColor.getrgb(color)
 
 
 def process_batch(
@@ -77,7 +94,40 @@ def process_batch(
     yield results
 
 
-def parse_args() -> tuple[argparse.Namespace, int, int, str, str]:
+def process_color_batch(
+    sample_to_file: Dict[str, Dict[str, str]],
+    bf_thresh: int,
+    fl_thresh: int,
+    radial_thresh: float | None,
+    rgb_color: Tuple[int, int, int],
+    batch_output_dir: str | None,
+    plot: bool = False,
+) -> Iterator[str | List[Result]]:
+    """Process a batch of single RGB images."""
+
+    results = []
+    for i, sample_name in enumerate(sorted(sample_to_file.keys())):
+        yield f'Processing sample {sample_name} ({i+1} of {len(sample_to_file)}):'
+        file_path = sample_to_file[sample_name]['file_path']
+        total, colored = process_color_image(
+            file_path,
+            sample_name,
+            rgb_color,
+            bf_thresh,
+            fl_thresh,
+            radial_thresh,
+            batch_output_dir,
+            plot=plot,
+        )
+        result = Result(sample_name)
+        result.total_seeds = total
+        result.fl_seeds = colored
+        results.append(result)
+
+    yield results
+
+
+def parse_args() -> tuple[argparse.Namespace, int, int, str, str, Tuple[int, int, int]]:
     help_message = (
         "This script takes an image or directory of images and returns the number of seeds in the image(s)."
     )
@@ -89,6 +139,8 @@ def parse_args() -> tuple[argparse.Namespace, int, int, str, str]:
     parser.add_argument('-t', '--intensity_thresh', type=str, help='Intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Example: "30,30". Default: "%(default)s"', default=f"{DEFAULT_BRIGHTFIELD_THESHOLD},{DEFAULT_FLUORESCENT_THRESHOLD}")
     parser.add_argument('-r', '--radial_thresh', type=float, help='Radial threshold to capture seeds. If not given, this value is set by taking the median area as a reference.', default=None)
     parser.add_argument('-s', '--img_type_suffix', type=str, help='Image type suffix. Format is <brightfield_suffix>,<fluorescent_suffix>. Example: BF,FL. Default: "%(default)s"', default=f"{DEFAULT_BRIGHTFIELD_SUFFIX},{DEFAULT_FLUORESCENT_SUFFIX}")
+    parser.add_argument('--mode', type=str, choices=['fluorescence', 'color'], default='fluorescence', help='Counting mode to use.')
+    parser.add_argument('--marker_color', type=str, default='#ff0000', help='Hex color for marker seeds when using color mode.')
 
     args = parser.parse_args()
 
@@ -99,14 +151,20 @@ def parse_args() -> tuple[argparse.Namespace, int, int, str, str]:
         
     try:
         bf_suffix, fl_suffix = args.img_type_suffix.split(',')
-    except:
+    except Exception:
         raise Exception('Invalid image type suffix format. Format is <brightfield_suffix>,<fluorescent_suffix>. Example: BF,FL')
 
-    return args, bf_thresh, fl_thresh, bf_suffix, fl_suffix
+    marker_rgb = hex_to_rgb(args.marker_color)
+
+    return args, bf_thresh, fl_thresh, bf_suffix, fl_suffix, marker_rgb
 
 def print_welcome_msg() -> None:
-    print(f'Welcome to Seed Counter!')
-    print(f'Make sure that your images are in the input directory in pairs: a {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) image and a {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent) image. For example, for "img1" you need to have two images: img1_{DEFAULT_BRIGHTFIELD_SUFFIX}.tif and img1_{DEFAULT_FLUORESCENT_SUFFIX}.tif')
+    print('Welcome to Seed Counter!')
+    print(
+        'For fluorescence mode, provide pairs of images: '
+        f'{DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) and {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent).'
+    )
+    print('For color mode, provide a single RGB image per sample.')
     print()
 
 
@@ -133,20 +191,46 @@ def collect_img_files(
     return sample_to_files, file_names
 
 
+def collect_single_img_files(
+    input_dir: str,
+) -> tuple[Dict[str, Dict[str, str]], List[str]]:
+    file_names = [
+        f
+        for f in os.listdir(input_dir)
+        if os.path.isfile(os.path.join(input_dir, f))
+        and os.path.splitext(f)[-1].lower() in VALID_EXTENSIONS
+    ]
+
+    sample_to_file = {}
+    for filename in file_names:
+        sample_name = os.path.splitext(filename)[0]
+        file_obj = {
+            'file_path': os.path.join(input_dir, filename),
+            'file_name': filename,
+        }
+        sample_to_file[sample_name] = file_obj
+
+    return sample_to_file, file_names
+
+
 if __name__ == "__main__":
-    args, bf_thresh, fl_thresh, bf_suffix, fl_suffix = parse_args()
+    args, bf_thresh, fl_thresh, bf_suffix, fl_suffix, marker_rgb = parse_args()
 
     print_welcome_msg()
 
-    sample_to_files, file_names = collect_img_files(args.dir, bf_suffix, fl_suffix)
-    print(f'Found {len(sample_to_files.keys())} unique prefixes in {len(file_names)} files')
+    if args.mode == 'fluorescence':
+        sample_to_files, file_names = collect_img_files(args.dir, bf_suffix, fl_suffix)
+    else:
+        sample_to_files, file_names = collect_single_img_files(args.dir)
+    print(f'Found {len(sample_to_files.keys())} unique samples in {len(file_names)} files')
 
     # Determine whether to store intermediate images
     img_output_dir = None if args.nostore else args.output
 
-    # Process each image pair
+    # Process images
     results = []
-    for message in process_batch(
+    if args.mode == 'fluorescence':
+        iterator = process_batch(
             sample_to_files,
             bf_thresh,
             fl_thresh,
@@ -154,8 +238,21 @@ if __name__ == "__main__":
             img_output_dir,
             bf_suffix=bf_suffix,
             fl_suffix=fl_suffix,
-            plot=args.plot):
-        if type(message) == str:
+            plot=args.plot,
+        )
+    else:
+        iterator = process_color_batch(
+            sample_to_files,
+            bf_thresh,
+            fl_thresh,
+            args.radial_thresh,
+            marker_rgb,
+            img_output_dir,
+            plot=args.plot,
+        )
+
+    for message in iterator:
+        if isinstance(message, str):
             print(message)
         else:
             results = message

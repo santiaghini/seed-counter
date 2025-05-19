@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import sys
 from typing import Any, Dict, Iterable, List
+from PIL import ImageColor
 
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -11,7 +12,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from utils import Result
-from run import process_batch
+from run import process_batch, process_color_batch
 
 BATCHES_DIR = 'batches'
 INPUT_DIR = 'input'
@@ -54,7 +55,7 @@ def dict_to_results_list(results_dict: Dict[str, Result]) -> List[Result]:
     return results_list
 
 
-def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str) -> Dict[str, List[Dict[str, str]]]:
+def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str, mode: str) -> Dict[str, Any]:
     # filter out non-image files
     parsed_filenames.sort(key=lambda obj: obj['file_name'])
 
@@ -69,15 +70,15 @@ def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str) -> Dict[s
 
         sample_name = obj['sample_name']
         file_obj = {
-                'file_path': file_path,
-                'file_name': file.name,
-                'img_type': obj['img_type']
-            }
-        
-        if sample_name not in sample_to_files:
-            sample_to_files[sample_name] = [file_obj]
+            'file_path': file_path,
+            'file_name': file.name,
+            'img_type': obj['img_type'],
+        }
+
+        if mode == 'fluorescence':
+            sample_to_files.setdefault(sample_name, []).append(file_obj)
         else:
-            sample_to_files[sample_name].append(file_obj)
+            sample_to_files[sample_name] = file_obj
 
     return sample_to_files
 
@@ -85,7 +86,7 @@ def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str) -> Dict[s
 def run_batch(
     batch_id: str,
     run_params: Dict[str, Any],
-    sample_to_files: Dict[str, List[Dict[str, str]]],
+    sample_to_files: Dict[str, Any],
     output_dir: str,
 ) -> Iterable[str | List[Result]]:
     bf_suffix = run_params['bf_suffix']
@@ -94,10 +95,35 @@ def run_batch(
     fl_thresh = run_params['fl_intensity_thresh']
     radial_thresh = run_params['radial_thresh']
 
+    mode = run_params.get('mode', 'fluorescence')
+
     yield f'Running batch {batch_id} with params: {run_params}'
     results = None
-    for m in process_batch(sample_to_files, bf_thresh, fl_thresh, radial_thresh, output_dir, bf_suffix=bf_suffix, fl_suffix=fl_suffix):
-        if type(m) == str:
+    if mode == 'fluorescence':
+        iterator = process_batch(
+            sample_to_files,
+            bf_thresh,
+            fl_thresh,
+            radial_thresh,
+            output_dir,
+            bf_suffix=bf_suffix,
+            fl_suffix=fl_suffix,
+        )
+    else:
+        color = run_params['marker_color']
+        if isinstance(color, str):
+            color = ImageColor.getrgb(color)
+        iterator = process_color_batch(
+            sample_to_files,
+            bf_thresh,
+            fl_thresh,
+            radial_thresh,
+            color,
+            output_dir,
+        )
+
+    for m in iterator:
+        if isinstance(m, str):
             yield m
         else:
             results = m
