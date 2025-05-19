@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import os
 from datetime import datetime
 import sys
-from typing import List
+from typing import Any, Dict, Iterable, List
 
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,12 +18,12 @@ INPUT_DIR = 'input'
 OUTPUT_DIR = 'output'
 
 
-def get_batch_id():
+def get_batch_id() -> str:
     # generate a batch run name based on the current date and time
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def create_folders(batch_id):
+def create_folders(batch_id: str) -> tuple[str, str, str]:
     batch_dir = os.path.join(BATCHES_DIR, batch_id)
     os.makedirs(batch_dir, exist_ok=True)
 
@@ -38,21 +40,21 @@ def create_folders(batch_id):
     return batch_dir, input_dir, output_dir
 
 
-def results_list_to_dict(results: List[Result]):
+def results_list_to_dict(results: List[Result]) -> Dict[str, Result]:
     results_dict = {}
     for result in results:
         results_dict[result.prefix] = result
     return results_dict
 
 
-def dict_to_results_list(results_dict):
+def dict_to_results_list(results_dict: Dict[str, Result]) -> List[Result]:
     results_list = []
     for prefix, result in results_dict.items():
         results_list.append(result)
     return results_list
 
 
-def load_files(parsed_filenames, input_dir):
+def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str) -> Dict[str, List[Dict[str, str]]]:
     # filter out non-image files
     parsed_filenames.sort(key=lambda obj: obj['file_name'])
 
@@ -80,7 +82,12 @@ def load_files(parsed_filenames, input_dir):
     return sample_to_files
 
 
-def run_batch(batch_id, run_params, sample_to_files, output_dir):
+def run_batch(
+    batch_id: str,
+    run_params: Dict[str, Any],
+    sample_to_files: Dict[str, List[Dict[str, str]]],
+    output_dir: str,
+) -> Iterable[str | List[Result]]:
     bf_suffix = run_params['bf_suffix']
     fl_suffix = run_params['fl_suffix']
     bf_thresh = run_params['bf_intensity_thresh']

@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 from datetime import datetime
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from dataclasses import dataclass, field
 from scipy.stats import chisquare
 
 from config import TARGET_RATIO
 
-VALID_EXTENSIONS = ['.tif', '.tiff', '.png', '.jpg', '.jpeg']
+VALID_EXTENSIONS: list[str] = ['.tif', '.tiff', '.png', '.jpg', '.jpeg']
 
-def plot_full(img, title='', cmap='jet'):
+def plot_full(img: np.ndarray, title: str = '', cmap: str = 'jet') -> None:
     # add title
     # plt.text(0, 0, title, color='white', fontsize=8, ha='left', va='top')
     plt.figure(figsize=(10,10))
@@ -19,7 +22,7 @@ def plot_full(img, title='', cmap='jet'):
     plt.tight_layout()
     plt.show()
 
-def plot_all(plots):
+def plot_all(plots: list[tuple[np.ndarray, str, str | None]]) -> None:
     assert len(plots) == 7, "This function is designed for 7 plots. If you need more or less, please modify the function."
     default_cmap = 'jet'
     num_plots = len(plots)
@@ -49,22 +52,21 @@ def plot_all(plots):
     plot_full(*plots[-1])
 
 
+@dataclass
 class Result:
-    def __init__(self, prefix):
-        self.prefix: str = prefix
-        self.__fl_seeds: int = None
-        self.__non_fl_seeds: int = None
-        self.__total_seeds: int = None
-        self.__ratio_fl_total: float = None
-        self.__chisquare: float = None
-        self.__pvalue: float = None
-
-        self.target_ratio = TARGET_RATIO
+    prefix: str
+    __fl_seeds: int | None = field(default=None, init=False, repr=False)
+    __non_fl_seeds: int | None = field(default=None, init=False, repr=False)
+    __total_seeds: int | None = field(default=None, init=False, repr=False)
+    __ratio_fl_total: float | None = field(default=None, init=False, repr=False)
+    __chisquare: float | None = field(default=None, init=False, repr=False)
+    __pvalue: float | None = field(default=None, init=False, repr=False)
+    target_ratio: float = field(default=TARGET_RATIO, init=False, repr=False)
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Result(prefix={self.prefix}, fl_seeds={self.__fl_seeds}, non_fl_seeds={self.__non_fl_seeds}, total_seeds={self.__total_seeds}, ratio_fl_total={self.__ratio_fl_total}, chisquare={self.__chisquare}, pvalue={self.__pvalue})"
     
-    def to_dict(self):
+    def to_dict(self) -> dict[str, float | int | str | None]:
         return {
             'prefix': self.prefix,
             'fl_seeds': self.__fl_seeds,
@@ -76,40 +78,40 @@ class Result:
         }
     
     @property
-    def fl_seeds(self):
+    def fl_seeds(self) -> int | None:
         return self.__fl_seeds
     
     @fl_seeds.setter
-    def fl_seeds(self, value):
+    def fl_seeds(self, value: int | None) -> None:
         self.__fl_seeds = value
         self.update_values()
 
     @property
-    def total_seeds(self):
+    def total_seeds(self) -> int | None:
         return self.__total_seeds
     
     @total_seeds.setter
-    def total_seeds(self, value):
+    def total_seeds(self, value: int | None) -> None:
         self.__total_seeds = value
         self.update_values()
 
     @property
-    def non_fl_seeds(self):
+    def non_fl_seeds(self) -> int | None:
         return self.__non_fl_seeds
     
     @property
-    def ratio_fl_total(self):
+    def ratio_fl_total(self) -> float | None:
         return self.__ratio_fl_total
     
     @property
-    def chisquare(self):
+    def chisquare(self) -> float | None:
         return self.__chisquare
     
     @property
-    def pvalue(self):
+    def pvalue(self) -> float | None:
         return self.__pvalue
     
-    def update_values(self):
+    def update_values(self) -> None:
         if self.__total_seeds != None and self.__fl_seeds != None:
             self.__non_fl_seeds = self.__total_seeds - self.__fl_seeds
             self.__ratio_fl_total = self.__fl_seeds / self.__total_seeds
@@ -121,7 +123,7 @@ class Result:
             self.__chisquare = None
             self.__pvalue = None
 
-    def round_all(self, decimals=2):
+    def round_all(self, decimals: int = 2) -> None:
         self.__fl_seeds = round_if_not_none(self.__fl_seeds)
         self.__non_fl_seeds = round_if_not_none(self.__non_fl_seeds)
         self.__total_seeds = round_if_not_none(self.__total_seeds)
@@ -130,7 +132,7 @@ class Result:
         self.__pvalue = round_if_not_none(self.__pvalue, 4)
 
 
-def compute_chi2(result, expected_ratio):
+def compute_chi2(result: Result, expected_ratio: float) -> tuple[float, float]:
     observed = np.array([result.fl_seeds, result.non_fl_seeds])
     total = result.total_seeds
     expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
@@ -139,7 +141,7 @@ def compute_chi2(result, expected_ratio):
     return chi2, p
 
 
-def build_results_csv(results):
+def build_results_csv(results: list[Result]) -> list[list[str | float | int | None]]:
     col_names = ['sample', 'fl_seeds', 'non_fl_seeds', 'total_seeds', 'ratio_fl_total', 'chisquare', 'pvalue']
     rows = [col_names]
     for result in results:
@@ -148,7 +150,7 @@ def build_results_csv(results):
     return rows
 
 
-def get_results_rounded(results, decimals=2):
+def get_results_rounded(results: list[Result], decimals: int = 2) -> list[Result]:
     new_results = results.copy()
     for result in results:
         result.round_all(decimals)
@@ -156,11 +158,16 @@ def get_results_rounded(results, decimals=2):
     return new_results
 
 
-def round_if_not_none(num, decimals=2):
+def round_if_not_none(num: float | int | None, decimals: int = 2) -> float | int | None:
     return round(num, decimals) if num is not None else None
 
 
-def store_results(results_csv, batch_output_dir, batch_id=None, filename=None):
+def store_results(
+    results_csv: list[list[str | float | int | None]],
+    batch_output_dir: str,
+    batch_id: str | None = None,
+    filename: str | None = None,
+) -> str:
     # save file with current timestamp
     if not batch_id:
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -178,7 +185,7 @@ def store_results(results_csv, batch_output_dir, batch_id=None, filename=None):
     return output_path
 
 
-def parse_filename(filename, bf_suffix, fl_suffix):
+def parse_filename(filename: str, bf_suffix: str, fl_suffix: str) -> tuple[str, str]:
     reminder = f"Filenames must be in the format <sample_name>_<image_type_suffix>.<extension>. Example: VZ254_{bf_suffix}.tif"
     try:
         pieces = filename.split('.')
