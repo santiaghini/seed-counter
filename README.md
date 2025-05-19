@@ -41,7 +41,7 @@ First, install the required dependencies. Make sure you have at least `Python 3.
 pip install -r requirements.txt
 ```
 
-After installing requirements, 1) `cd` into the folder containing this repo and 2) make sure that the images are in a directory and in the format and specification specified above. Then, *Seed Segmenter* can be run with:
+After installing requirements, 1) `cd` into the folder containing this repo and 2) make sure that the images are in a directory and in the format and specification specified above. Then, *Seed Counter* can be run with:
 ```bash
 python run.py --dir ./images --output ./output_directory --intensity_thresh 30,30
 ```
@@ -50,7 +50,7 @@ python run.py --dir ./images --output ./output_directory --intensity_thresh 30,3
 - `-n, --nostore`: flag, if present, does not store the processed images with contours for counting, only the final results in .csv format. Default is `False`.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
 - `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
-- `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are capture versus how much seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() bellow to tune this value. By default this value is set automatically using the median seed area in the image.
+- `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are captured versus how many seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() below to tune this value. By default this value is set automatically using the median seed area in the image.
 - `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images. For example, if your images use `fluoro` and `bright` as suffixes, you would set this parameter as `--img_type_suffix fluoro,bright`.
 
 You can get details of all arguments by running:
