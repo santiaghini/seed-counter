@@ -6,7 +6,7 @@ DEFAULT_FLUORESCENT_SUFFIX = "FL"
 # Balance: the smaller this is set, the more likely seeds will be captured BUT the more likely noise will be captured
 INITIAL_BRIGHTNESS_THRESHOLDS = {
     DEFAULT_BRIGHTFIELD_SUFFIX: 30,
-    DEFAULT_FLUORESCENT_SUFFIX: 15
+    DEFAULT_FLUORESCENT_SUFFIX: 15,
 }
 
 # Change according to scale of image and size of seeds
@@ -21,9 +21,6 @@ SCALE_BAR_WIDTH = 500
 # Increase if seeds are closer together, decrease if seeds are farther apart
 # Balance: the smaller this is set, the more likely seeds will be separated BUT the more likely smaller (or dimmer) seeds will be left out
 # NOTE: DEPRECATED, now we calculate it based on reference values
-DISTANCE_THRESHOLDS = {
-    DEFAULT_BRIGHTFIELD_SUFFIX: 10,
-    DEFAULT_FLUORESCENT_SUFFIX: 12
-}
+DISTANCE_THRESHOLDS = {DEFAULT_BRIGHTFIELD_SUFFIX: 10, DEFAULT_FLUORESCENT_SUFFIX: 12}
 
 TARGET_RATIO = 0.75

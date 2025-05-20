@@ -1,18 +1,17 @@
 INSTRUCTIONS_TEXT = """
-Seed Counter requires the following for each input image:
-- A fluorescence intensity image (grayscale or false color), to count seeds expressing a fluorescent marker
-- A brightfield image, to count total number of seeds
+Seed Counter can operate in two modes:
+1. **Fluorescence mode** expects image pairs:
+   - A fluorescence intensity image to count seeds expressing a fluorescent marker
+   - A brightfield image to count total seeds
+   Images should follow the convention `<sample>_<image_type>.<extension>` where:
+   - `sample` is an ID for the sample being analyzed
+   - `image_type` is either `FL` (fluorescent) or `BF` (brightfield)
+   - `extension` is usually `.tif`
+   Example: `VZ254_BF.tif` and `VZ254_FL.tif`
 
-You should upload these pairs of images following the following convention:
+2. **Color mode** expects a single RGB image per sample where marked seeds have a distinct color.
 
-`<sample>_<image_type>.<extension>`
-- `sample`: name/ID for the sample being analyzed, each image pair (fluorescent + brightfield) in the sample should have the same prefix.
-- `image_type`: either `FL` (fluorescent image) or `BF` (brightfield image) - suffix can be changed in "Parameters for manual setup"
-- `extension`: extension of the image (usually `.tif`)
-
-Example `VZ254_BF.tif` and `VZ254_FL.tif`
-
-Upload your images using the file uploader below. Once you have uploaded all your images, click the "Run Seed Counter" button to run the analysis. You will be able to download the results as a CSV file.
+Upload your images using the file uploader below. After uploading, click "Run Seed Counter" to run the analysis and download a CSV with the results.
 """
 
 PARAM_HINTS = """

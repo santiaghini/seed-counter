@@ -21,18 +21,22 @@ SeedCounter takes a batch of images as input and outputs in `.csv` format the co
 </div>
 
 ## Getting started
-SeedCounter requires the following for each input image:
-- A fluorescence intensity image (grayscale or false color), to count seeds expressing a fluorescent marker
-- A brightfield image, to count total number of seeds
+SeedCounter can operate in two modes.
 
-Images should be in a directory with a specific naming convention:
+**Fluorescence mode** requires two images per sample:
+- A fluorescence intensity image (grayscale or false color) to count seeds with a marker.
+- A brightfield image to count the total number of seeds.
+
+These images should be in a directory with the following naming convention:
 
 `<sample>_<image_type>.<extension>`
 - `sample`: name/ID for the sample being analyzed, each image pair (fluorescent + brightfield) in the sample should have the same prefix.
 - `image_type`: either `FL` (fluorescent image) or `BF` (brightfield image), can be customized using the `--img_type_suffix` parameter.
 - `extension`: extension of the image (usually `.tif`).
 
-Example `VZ254_BF.tif` and `VZ254_FL.tif`
+Example: `VZ254_BF.tif` and `VZ254_FL.tif`
+
+**Color mode** requires a single RGB image per sample where marked seeds appear in a distinct color. The file name itself is used as the sample name.
 
 ## Usage
 
@@ -43,7 +47,7 @@ pip install -r requirements.txt
 
 After installing requirements, 1) `cd` into the folder containing this repo and 2) make sure that the images are in a directory and in the format and specification specified above. Then, *Seed Counter* can be run with:
 ```bash
-python run.py --dir ./images --output ./output_directory --intensity_thresh 30,30
+python run.py --dir ./images --output ./output_directory --mode fluorescence --intensity_thresh 30,30
 ```
 - `-d, --dir`: directory with input images with the specified format (required).
 - `-o, --output`: output directory to store results (required).
@@ -51,7 +55,9 @@ python run.py --dir ./images --output ./output_directory --intensity_thresh 30,3
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
 - `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
 - `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are captured versus how many seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() below to tune this value. By default this value is set automatically using the median seed area in the image.
-- `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images. For example, if your images use `fluoro` and `bright` as suffixes, you would set this parameter as `--img_type_suffix fluoro,bright`.
+- `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images.
+- `--mode`: either `fluorescence` (default) or `color`.
+- `--marker_color`: hex color for marker seeds when running in color mode.
 
 You can get details of all arguments by running:
 ```bash
