@@ -49,8 +49,9 @@ st.set_page_config(
 )
 
 ##########################           GLOBALS           ##########################
-RADIAL_THRESH_DEFAULT = 12
-RADIAL_THRESH_RANGE = (6, 25)
+RADIAL_THRESH_DEFAULT = 0.4
+RADIAL_THRESH_RATIO = (0, 1)
+LARGE_AREA_FACTOR_DEFAULT = 20.0
 
 BATCH_ID = None
 RUN_PARAMS = {
@@ -58,9 +59,9 @@ RUN_PARAMS = {
     "fl_suffix": None,
     "bf_intensity_thresh": None,
     "fl_intensity_thresh": None,
-    "radial_thresh": None,
+    "radial_threshold_ratio": None,
+    "large_area_factor": None,
     "mode": "fluorescence",
-    "marker_color": "#ff0000",  # in RGB mode this is the hex value of the marker color (e.g. "#ff0000" for red)
 }
 PREFIX_TO_FILENAMES = None
 
@@ -207,10 +208,26 @@ def get_output_imgs(output_dir: str) -> List[str]:
 @st.cache_data
 def build_prefix_to_output_imgs(
     output_imgs: List[str],
+    mode: str,
 ) -> Dict[str, Dict[str, str | None]]:
     prefix_to_output_imgs = {}
     for img in output_imgs:
-        prefix = os.path.basename(img).split("_")[0]
+        if mode == "fluorescence":
+            prefix = os.path.basename(img).split("_")[0]
+        else:
+            prefix = None
+            for suffix in (DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX):
+                target = f"_{suffix}_"
+                basename = os.path.basename(img)
+                if target in basename:
+                    idx = basename.find(target)
+                    prefix = basename[:idx]
+                    print(f"prefix: {prefix}")
+                    break
+            # If no suffix is found, use the base name of the image
+            if not prefix:
+                prefix = os.path.basename(img)
+
         if prefix not in prefix_to_output_imgs:
             prefix_to_output_imgs[prefix] = {
                 DEFAULT_BRIGHTFIELD_SUFFIX: None,
@@ -264,50 +281,93 @@ st.markdown(":gray[*Pro Tip: To clear all uploaded files, reload the page.*]")
 
 ### Parameter box
 with st.expander("**Parameters for manual setup**"):
-    # FIXME: completely customize depending on the mode.
-    # if not st.session_state.expanded_params:
-    #     st.session_state.expanded_params = True
-
     st.subheader("Parameters")
 
-    th_min, th_max = RADIAL_THRESH_RANGE
+    th_min, th_max = float(RADIAL_THRESH_RATIO[0]), float(RADIAL_THRESH_RATIO[1])
 
     suff_col1, suff_col2 = st.columns(2)
     with suff_col1:
+        enable_bf_suffix = st.checkbox(
+            "Enable Brightfield suffix",
+            value=True,
+            disabled=RUN_PARAMS["mode"] == "color",
+        )
         RUN_PARAMS["bf_suffix"] = st.text_input(
             "Brightfield suffix",
             value=DEFAULT_BRIGHTFIELD_SUFFIX,
-            disabled=RUN_PARAMS["mode"] != "fluorescence",
+            disabled=(not enable_bf_suffix or RUN_PARAMS["mode"] != "fluorescence"),
+        )
+        if not enable_bf_suffix:
+            RUN_PARAMS["bf_suffix"] = None
+
+        enable_bf_thresh = st.checkbox(
+            "Enable Brightfield Intensity Threshold", value=False
         )
         RUN_PARAMS["bf_intensity_thresh"] = st.slider(
             "Brightfield Intensity Threshold",
             0,
             255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX],
+            disabled=not enable_bf_thresh,
         )
-        RUN_PARAMS["radial_thresh"] = st.slider(
-            "Radial Threshold", th_min, th_max, RADIAL_THRESH_DEFAULT
+        if not enable_bf_thresh:
+            RUN_PARAMS["bf_intensity_thresh"] = None
+
+        enable_radial_thresh = st.checkbox("Enable Radial Threshold Ratio", value=False)
+        RUN_PARAMS["radial_threshold_ratio"] = st.slider(
+            "Radial Threshold Ratio",
+            th_min,
+            th_max,
+            float(RADIAL_THRESH_DEFAULT),
+            step=0.01,
+            disabled=not enable_radial_thresh,
         )
+        if not enable_radial_thresh:
+            RUN_PARAMS["radial_threshold_ratio"] = None
 
     with suff_col2:
+        enable_fl_suffix = st.checkbox(
+            "Enable Fluorescent suffix",
+            value=True,
+            disabled=RUN_PARAMS["mode"] == "color",
+        )
         RUN_PARAMS["fl_suffix"] = st.text_input(
             "Fluorescent suffix",
             value=DEFAULT_FLUORESCENT_SUFFIX,
-            disabled=RUN_PARAMS["mode"] != "fluorescence",
+            disabled=(not enable_fl_suffix or RUN_PARAMS["mode"] != "fluorescence"),
+        )
+        if not enable_fl_suffix:
+            RUN_PARAMS["fl_suffix"] = None
+
+        enable_fl_thresh = st.checkbox(
+            "Enable Fluorescent Intensity Threshold", value=False
         )
         RUN_PARAMS["fl_intensity_thresh"] = st.slider(
             "Fluorescent Intensity Threshold",
             0,
             255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX],
+            disabled=not enable_fl_thresh,
         )
-        if RUN_PARAMS["mode"] == "color":
-            RUN_PARAMS["marker_color"] = st.color_picker(
-                "Marker color", value=RUN_PARAMS["marker_color"]
-            )
+        if not enable_fl_thresh:
+            RUN_PARAMS["fl_intensity_thresh"] = None
 
+        enable_large_area_factor = st.checkbox("Enable Large Area Factor", value=False)
+        RUN_PARAMS["large_area_factor"] = st.slider(
+            "Large Area Factor (for removal)",
+            1.0,
+            100.0,
+            float(LARGE_AREA_FACTOR_DEFAULT),
+            step=1.0,
+            disabled=not enable_large_area_factor,
+        )
+        if not enable_large_area_factor:
+            RUN_PARAMS["enable_large_area_factor"] = None
+
+    st.divider()
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):
         st.markdown(PARAM_HINTS)
+
 
 ### RUN BUTTON
 st.button("Run SeedCounter", disabled=not uploaded_files, on_click=click_run_button)
@@ -353,7 +413,10 @@ if st.session_state.clicked_run:
         # get all png files from output_dir
         output_imgs = get_output_imgs(run_results["output_dir"])
         # group images by prefix
-        prefix_to_output_imgs = build_prefix_to_output_imgs(output_imgs)
+        prefix_to_output_imgs = build_prefix_to_output_imgs(
+            output_imgs, RUN_PARAMS["mode"]
+        )
+        print(f"prefix_to_output_imgs: {prefix_to_output_imgs}")
 
         col1, col2 = st.columns([1, 3])
         prefixes = sorted(list(prefix_to_output_imgs.keys()))
@@ -377,7 +440,14 @@ if st.session_state.clicked_run:
                 DEFAULT_BRIGHTFIELD_SUFFIX,
                 DEFAULT_FLUORESCENT_SUFFIX,
             ]:  # one for brightfield, one for fluorescent
-                image_path = prefix_to_output_imgs[prefix][img_type]
+                try:
+                    image_path = prefix_to_output_imgs[prefix][img_type]
+                except KeyError:
+                    st.write(
+                        f"Missing image for {readable_type_map[img_type]} ({img_type}) for sample '{prefix}'."
+                    )
+                    image_path = None
+
                 if image_path:
                     image = Image.open(image_path)
                     caption = f"{readable_type_map[img_type]} - {image_path}"

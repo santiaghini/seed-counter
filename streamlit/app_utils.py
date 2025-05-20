@@ -94,7 +94,10 @@ def run_batch(
     fl_suffix = run_params["fl_suffix"]
     bf_thresh = run_params["bf_intensity_thresh"]
     fl_thresh = run_params["fl_intensity_thresh"]
-    radial_thresh = run_params["radial_thresh"]
+    radial_threshold_ratio = run_params["radial_threshold_ratio"]
+    large_area_factor = run_params["large_area_factor"]
+
+    print(run_params)
 
     mode = run_params.get("mode", "fluorescence")
 
@@ -102,25 +105,25 @@ def run_batch(
     results = None
     if mode == "fluorescence":
         iterator = process_fluorescent_batch(
-            sample_to_files,
-            bf_thresh,
-            fl_thresh,
-            radial_thresh,
-            output_dir,
+            sample_to_files=sample_to_files,
+            bf_thresh=bf_thresh,
+            fl_thresh=fl_thresh,
+            radial_thresh=None,
+            batch_output_dir=output_dir,
             bf_suffix=bf_suffix,
             fl_suffix=fl_suffix,
+            radial_threshold_ratio=radial_threshold_ratio,
+            large_area_factor=large_area_factor,
         )
     else:
-        color = run_params["marker_color"]
-        if isinstance(color, str):
-            color = ImageColor.getrgb(color)
         iterator = process_color_batch(
-            sample_to_files,
-            bf_thresh,
-            fl_thresh,
-            radial_thresh,
-            color,
-            output_dir,
+            sample_to_file=sample_to_files,
+            bf_thresh=bf_thresh,
+            fl_thresh=fl_thresh,
+            radial_thresh=None,
+            batch_output_dir=output_dir,
+            radial_threshold_ratio=radial_threshold_ratio,
+            large_area_factor=large_area_factor,
         )
 
     for m in iterator:

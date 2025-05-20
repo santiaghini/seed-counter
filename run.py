@@ -38,6 +38,7 @@ def process_fluorescent_batch(
     bf_suffix: str | None = None,
     fl_suffix: str | None = None,
     radial_threshold_ratio: float | None = None,
+    large_area_factor: float | None = None,
     plot: bool = False,
 ) -> Iterator[str | List[Result]]:
 
@@ -64,6 +65,8 @@ def process_fluorescent_batch(
                     initial_brightness_thresh=bf_thresh,
                     radial_threshold=radial_thresh,
                     radial_threshold_ratio=radial_threshold_ratio,
+                    image_L=None,
+                    large_area_factor=large_area_factor,
                     output_dir=batch_output_dir,
                     plot=plot,
                 )
@@ -77,7 +80,9 @@ def process_fluorescent_batch(
                     sample_name=sample_name,
                     initial_brightness_thresh=fl_thresh,
                     radial_threshold=radial_thresh,
+                    image_L=None,
                     radial_threshold_ratio=radial_threshold_ratio,
+                    large_area_factor=large_area_factor,
                     output_dir=batch_output_dir,
                     plot=plot,
                 )
@@ -97,11 +102,12 @@ def process_fluorescent_batch(
 
 def process_color_batch(
     sample_to_file: Dict[str, Dict[str, str]],
-    bf_thresh: int,
-    fl_thresh: int,
+    bf_thresh: int | None,
+    fl_thresh: int | None,
     radial_thresh: float | None,
     batch_output_dir: str | None,
     radial_threshold_ratio: float | None = None,
+    large_area_factor: float | None = None,
     plot: bool = False,
 ) -> Iterator[str | List[Result]]:
     """Process a batch of single RGB images."""
@@ -119,6 +125,7 @@ def process_color_batch(
             radial_threshold=radial_thresh,
             radial_threshold_ratio=radial_threshold_ratio,
             output_dir=batch_output_dir,
+            large_area_factor=large_area_factor,
             plot=plot,
         )
         result = Result(sample_name)
@@ -252,6 +259,12 @@ if __name__ == "__main__":
         default=0.4,
         help="Compute the radial threshold as a ratio of the median area of the seeds. Default: 0.4",
     )
+    parser.add_argument(
+        "--large_area_factor",
+        type=float,
+        default=20.0,
+        help="Factor to determine the maximum allowed area for a seed (relative to median area). Used to filter out very large objects. Default is 20.",
+    )
 
     args = parser.parse_args()
 
@@ -300,6 +313,7 @@ if __name__ == "__main__":
             bf_suffix=bf_suffix,
             fl_suffix=fl_suffix,
             radial_threshold_ratio=args.radial_threshold_ratio,
+            large_area_factor=args.large_area_factor,
             plot=args.plot,
         )
     else:
@@ -310,6 +324,7 @@ if __name__ == "__main__":
             radial_thresh=args.radial_thresh,
             batch_output_dir=img_output_dir,
             radial_threshold_ratio=args.radial_threshold_ratio,
+            large_area_factor=args.large_area_factor,
             plot=args.plot,
         )
 

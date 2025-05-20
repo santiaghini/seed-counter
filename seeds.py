@@ -100,13 +100,14 @@ def process_seed_image(
     image: np.ndarray,
     img_type: str,
     sample_name: str,
-    initial_brightness_thresh: int | None,
-    radial_threshold: float | None,
-    image_L: np.ndarray | None,
+    initial_brightness_thresh: int | None = None,
+    radial_threshold: float | None = None,
+    image_L: np.ndarray | None = None,
     output_dir: str | None = None,
     plot: bool = False,
     remove_scale_bar: bool = True,
     radial_threshold_ratio: float | None = None,
+    large_area_factor: float | None = None,
 ) -> int:
     """
     Process a seed image to count the number of seeds.
@@ -126,13 +127,32 @@ def process_seed_image(
         remove_scale_bar (bool): If True, mask out the lower left region (assumed to be a scale bar).
         radial_threshold_ratio (float | None): Fraction of the median distance transform value to use for
             thresholding; if None, use default (0.4).
+        large_area_factor (float): Factor to determine the maximum allowed area for a seed (relative to median area).
+            Used to filter out very large objects. Default is 20.
 
     Returns:
         int: The number of seeds detected in the image.
     """
+    # Print the values or shapes of arguments for debugging
+    print(f"process_seed_image called with:")
+    print(f"  image shape: {image.shape if hasattr(image, 'shape') else type(image)}")
+    print(f"  img_type: {img_type}")
+    print(f"  sample_name: {sample_name}")
+    print(f"  initial_brightness_thresh: {initial_brightness_thresh}")
+    print(f"  radial_threshold: {radial_threshold}")
+    print(
+        f"  image_L shape: {image_L.shape if image_L is not None and hasattr(image_L, 'shape') else image_L}"
+    )
+    print(f"  output_dir: {output_dir}")
+    print(f"  plot: {plot}")
+    print(f"  remove_scale_bar: {remove_scale_bar}")
+    print(f"  radial_threshold_ratio: {radial_threshold_ratio}")
+    print(f"  large_area_factor: {large_area_factor}")
 
     if radial_threshold_ratio is None:
         radial_threshold_ratio = 0.4
+    if large_area_factor is None:
+        large_area_factor = 20
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
 
@@ -162,6 +182,7 @@ def process_seed_image(
         threshold_value, thresholded_img = cv2.threshold(
             L_norm, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_TRIANGLE
         )
+        initial_brightness_thresh = threshold_value
     else:
         threshold_value, thresholded_img = cv2.threshold(
             L_norm, initial_brightness_thresh, 255, cv2.THRESH_BINARY
@@ -203,7 +224,7 @@ def process_seed_image(
     # --- Filter out very large areas ---
     # Remove regions that are much larger than typical seeds (likely merged seeds or artifacts).
     median_area = np.median(areas)
-    LARGE_AREA_FACTOR = 20
+    LARGE_AREA_FACTOR = large_area_factor
 
     if median_area == 0:
         raise RuntimeError("No valid seed area found")
@@ -352,19 +373,18 @@ def process_seed_image(
     mask = markers == -1
     dilated_mask = cv2.dilate(mask.astype(np.uint8), kernel, iterations=1)
 
-    image_with_contours_dil = image.copy()
-    image_with_contours_dil[dilated_mask == 1] = [255, 255, 0]
+    image_with_contours_final = image.copy()
+    image_with_contours_final[dilated_mask == 1] = [255, 255, 0]
 
     # Plot the original image with contours
-    image_with_contours_final = cv2.cvtColor(image_with_contours_dil, cv2.COLOR_BGR2RGB)
     if plot:
         plots.append((image_with_contours_final, "Image with contours", None))
 
     # --- Save output image if requested ---
     if output_dir is not None:
         cv2.imwrite(
-            f"{output_dir}/{sample_name}_{img_type}_brightness{initial_brightness_thresh}_radial{radial_threshold}_contours.png",
-            image,
+            f"{output_dir}/{sample_name}_{img_type}_brightness={initial_brightness_thresh}_radial={radial_threshold}_contours.png",
+            image_with_contours_final,
         )
 
     # --- Show all plots if requested ---
@@ -382,6 +402,7 @@ def process_color_image(
     radial_threshold: float | None = None,
     radial_threshold_ratio: float | None = None,
     output_dir: str | None = None,
+    large_area_factor: float | None = None,
     plot: bool = False,
 ) -> tuple[int, int]:
     """Process a single RGB image for total and colored seeds."""
@@ -393,6 +414,7 @@ def process_color_image(
         initial_brightness_thresh=bf_thresh,
         radial_threshold=radial_threshold,
         radial_threshold_ratio=radial_threshold_ratio,
+        large_area_factor=large_area_factor,
         output_dir=output_dir,
         plot=plot,
         image_L=None,
@@ -407,6 +429,7 @@ def process_color_image(
         initial_brightness_thresh=fl_thresh,
         radial_threshold=radial_threshold,
         radial_threshold_ratio=radial_threshold_ratio,
+        large_area_factor=large_area_factor,
         output_dir=output_dir,
         plot=plot,
     )
