@@ -108,6 +108,10 @@ def process_seed_image(
     remove_scale_bar: bool = True,
     radial_threshold_ratio: float | None = None,
 ) -> int:
+    """
+    Process a seed image to count the number of seeds.
+    Applies normalization, thresholding, area filtering, and segmentation.
+    """
 
     if radial_threshold_ratio is None:
         radial_threshold_ratio = 0.4
@@ -119,26 +123,23 @@ def process_seed_image(
             f"Image type must be either {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) or {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent)"
         )
 
-    # Only convert to LAB and split if image has 3 channels (i.e., is color)
+    # --- Extract L channel (lightness) ---
     if image_L is None and len(image.shape) == 3 and image.shape[2] == 3:
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        L, a, b = cv2.split(lab)  # keep only L as the lightness channel
+        L, a, b = cv2.split(lab)
     else:
-        # If already single channel, assume this is L
         L = image_L
 
-    # We expect seeds to be the bright regions in the image, so we normalize the L channel
-    # to ensure that the seeds are always the high (bright) values in the image.
+    # --- Normalize so seeds are always bright ---
     L_norm = normalize_seeds_bright(L)
 
-    # Eliminate scale bar
     if remove_scale_bar:
         L_norm[-50:, :500] = 0
 
     if plot:
         plots.append((L_norm, "Grayscale image", "gray"))
 
-    # Threshold the unique channel image to isolate bright regions
+    # --- Threshold to isolate bright regions (seeds) ---
     if not initial_brightness_thresh:
         threshold_value, thresholded_img = cv2.threshold(
             L, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_TRIANGLE
@@ -148,73 +149,51 @@ def process_seed_image(
             L_norm, initial_brightness_thresh, 255, cv2.THRESH_BINARY
         )
 
-    print(f"Threshold value: {threshold_value}")
+    print(f"Intensity threshold value: {threshold_value}")
 
     if plot:
         plots.append((thresholded_img, "Thresholded image", None))
 
-    # Segment by component areas
+    # --- Initial connected components: segment all regions ---
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         thresholded_img, connectivity=8
     )
+    areas = stats[1:, cv2.CC_STAT_AREA]  # Exclude background
 
-    # Get the areas of all components
-    areas = stats[
-        1:, cv2.CC_STAT_AREA
-    ]  # Exclude the background, which is the first label
-
-    ####### START Filter small areas
+    # --- Filter out small areas ---
     SMALL_AREA_FACTOR = 0.1
+    # 95th percentile of areas works well for most images, as the initial pass has a lot of noise
     area_95th = np.percentile(areas, 95)
     idxs_small_area = np.where(areas < area_95th * SMALL_AREA_FACTOR)[0] + 1
-
-    # Create a mask for small areas
     mask_small = np.isin(labels, idxs_small_area)
-
-    # Remove areas smaller than median_area * SMALL_AREA_FACTOR
     thresholded_img[mask_small] = 0
-    ####### END Filter small areas
 
-    # filter again since we removed small areas
-    # Segment by component areas
+    # --- Re-segment after removing small areas ---
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         thresholded_img, connectivity=8
     )
+    areas = stats[1:, cv2.CC_STAT_AREA]
 
-    # Get the areas of all components
-    areas = stats[
-        1:, cv2.CC_STAT_AREA
-    ]  # Exclude the background, which is the first label
-
-    # --- Filter very large areas ---
-    # Remove the top five largest areas if they are much larger than the median area
+    # --- Filter out very large areas ---
+    # Remove regions that are much larger than typical seeds (likely merged seeds or artifacts).
     median_area = np.median(areas)
     LARGE_AREA_FACTOR = 20
 
-    # stats already computed with cv2.connectedComponentsWithStats
     if median_area == 0:
         raise RuntimeError("No valid seed area found")
 
-    # labels to drop (indices are 0-based w.r.t. 'areas', so +1 later)
     too_big = np.where(areas > LARGE_AREA_FACTOR * median_area)[0]
-
-    # keep at most the 5 largest, if you really need the limit
     if too_big.size > 5:
         top5 = too_big[np.argsort(areas[too_big])[-5:]]
         too_big = top5
 
-    thresholded_img_pre_remove_big_areas = np.copy(thresholded_img)
-
-    # zero them in one shot
-    for lbl in too_big + 1:  # +1 because label 0 = background
+    for lbl in too_big + 1:  # +1 for label offset
         thresholded_img[labels == lbl] = 0
 
-    # get updated areas
+    # --- Re-segment after removing large areas ---
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         thresholded_img, connectivity=8
     )
-
-    # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
 
     if plot:
@@ -222,11 +201,10 @@ def process_seed_image(
             (thresholded_img, "Thresholded image (filtered small areas)", None)
         )
 
-    ####### START Obtain and verify median area
+    # --- Obtain and verify median area ---
+    # Find the median area and create a mask for a typical seed.
     median_area = np.median(areas)
-
     temp_areas = np.copy(areas)
-    # if areas has an even length, add a zero to the start of the end of the array
     if len(temp_areas) % 2 == 0:
         temp_areas = np.append(temp_areas, 0)
         median_area = np.median(temp_areas)
@@ -234,22 +212,22 @@ def process_seed_image(
     median_area_label = np.where(areas == median_area)[0][0] + 1
     median_area_mask = np.zeros(thresholded_img.shape, dtype="uint8")
     median_area_mask[labels == median_area_label] = 255
+
     if plot:
         plots.append((median_area_mask, "Median area mask", "gray"))
 
-    ####### END Get median area and verify
-
-    # noise removal
+    # --- Morphological noise removal ---
+    # Use morphological opening to remove small noise and smooth the object edges.
     kernel = np.ones((3, 3), np.uint8)
     opening = cv2.morphologyEx(thresholded_img, cv2.MORPH_OPEN, kernel, iterations=2)
 
-    # sure background area
     sure_bg = cv2.dilate(opening, kernel, iterations=3)
-
-    # Finding sure foreground area
+    # --- Distance transform for sure foreground ---
     dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
 
+    # --- Determine radial threshold ---
     if not radial_threshold:
+        # Compute radial threshold by finding the distance transform value at the median area
         radial_threshold = dt_threshold_from_median(
             num_areas=num_labels,
             area_labels=labels,
@@ -261,74 +239,67 @@ def process_seed_image(
             frac=radial_threshold_ratio,
         )
 
-    # Get centers of components from threshold
+    # --- Threshold distance transform to get sure foreground ---
+    # This isolates the core of each seed.
     ret, sure_fg = cv2.threshold(dist_transform, radial_threshold, 255, 0)
 
-    ####### START Second pass on large areas
-    # Ensure sure_fg is 8-bit before applying connectedComponentsWithStats
+    # --- Second pass: split large areas ---
+    # Convert sure foreground to uint8 for connected components analysis
     sure_fg = np.uint8(sure_fg)
-    # Label connected components
+    # Find connected components in the sure foreground mask
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         sure_fg, connectivity=8
-    )  # labels is markers
-
-    # Get the areas of all components
+    )
+    # Calculate the area of each component (excluding background)
     areas = stats[1:, cv2.CC_STAT_AREA]
     avg_area = np.mean(areas)
 
-    # Get indices of all areas greater than 1.5 * avg_area
-    idxs_large_area = np.where(areas > 1.5 * avg_area)[0] + 1
+    # Identify indices of components that are significantly larger than average (likely merged seeds)
+    idxs_large_area = (
+        np.where(areas > 1.5 * avg_area)[0] + 1
+    )  # +1 to account for background label
 
+    # Create a mask for the large components
     component_mask = np.zeros(sure_fg.shape, dtype="uint8")
     for i in idxs_large_area:
         component_mask[labels == i] = 255
 
-    # Perform a distance transform on the component
+    # Apply distance transform to the mask of large components
     dist_transform = cv2.distanceTransform(component_mask, cv2.DIST_L2, 5)
 
+    # Threshold the distance transform to find potential seed centers within large components
     _, thresh = cv2.threshold(dist_transform, 0.3 * dist_transform.max(), 255, 0)
-
-    # Convert sure_fg back to 8-bit
     thresh = np.uint8(thresh)
 
-    # perform connected components analysis on the new markers
     num_labels_new, labels_new = cv2.connectedComponents(thresh, 8, cv2.CV_32S)
 
-    # increment labels_new by num_labels to ensure new unique labels
+    # Offset new labels so they don't overlap with existing ones
     labels_new = labels_new + num_labels
 
-    # replace the old components in the labels array with 0s
+    # Remove the original large components from the label image
     for i in idxs_large_area:
         labels[labels == i] = 0
 
-    # replace the old component in the labels array with the new components
+    # Add the new split components into the label image
     labels[labels_new > num_labels] = labels_new[labels_new > num_labels]
 
+    # Create a binary mask of all components (for final counting)
     components = np.copy(labels)
     components[components > 0] = 255
     components = np.uint8(components)
-    ####### END Second pass on large areas
 
-    # Perform connected components for final count
+    # --- Final connected components for seed count ---
     num_labels_final, labels_final, stats_final, centroids_final = (
         cv2.connectedComponentsWithStats(components, 8, cv2.CV_32S)
     )
 
-    ####### Filter small areas (second pass)
-    # areas_final = stats_final[1:, cv2.CC_STAT_AREA]
-    # idxs_small_area = np.where(areas_final < SMALL_AREA_POST_PASS)[0] + 1
-    # mask_small = np.isin(labels_final, idxs_small_area)
-    # labels_final[mask_small] = 0
-    #######
-
-    # Subtract 1 to exclude the background
+    # --- Count seeds (exclude background) ---
     num_seeds = len(np.unique(labels_final)) - 1
-    # update labels_final to be labels with every pixel > 0 set to 255
     final_sure_fg = np.copy(labels_final)
     final_sure_fg[final_sure_fg > 0] = 255
     final_sure_fg = np.uint8(final_sure_fg)
 
-    # Plot the final sure foreground (count of seeds is computed from these)
+    # --- Plot final sure foreground ---
     image_final_components = cv2.cvtColor(final_sure_fg, cv2.COLOR_BGR2RGB)
     if plot:
         plots.append(
@@ -339,20 +310,18 @@ def process_seed_image(
             )
         )
 
-    ####### START Watershed (for visualization only)
+    # --- Watershed for visualization only ---
+    # Use watershed to visualize boundaries between seeds.
     unknown = cv2.subtract(sure_bg, final_sure_fg)
-    # Add one to all labels so that sure background is not 0, but 1
     markers = labels_final + 1
-    # Now, mark the region of unknown with zero
     markers[unknown == 255] = 0
-    # Perform watershed
     markers = cv2.watershed(image, markers)
-    ####### END Watershed
 
     if plot:
         plots.append((markers, "Markers", None))
 
-    # Increase margin of markers to 3 pixels
+    # --- Draw contours for visualization ---
+    # Highlight the boundaries found by watershed.
     kernel = np.ones((7, 7), np.uint8)
     mask = markers == -1
     dilated_mask = cv2.dilate(mask.astype(np.uint8), kernel, iterations=1)
@@ -365,17 +334,17 @@ def process_seed_image(
     if plot:
         plots.append((image_with_contours_final, "Image with contours", None))
 
+    # --- Save output image if requested ---
     if output_dir is not None:
         cv2.imwrite(
             f"{output_dir}/{sample_name}_{img_type}_brightness{initial_brightness_thresh}_radial{radial_threshold}_contours.png",
             image,
         )
 
-    # Plot all images at once
+    # --- Show all plots if requested ---
     if plot:
         plot_all(plots)
 
-    # Return the number of seeds
     return num_seeds
 
 
