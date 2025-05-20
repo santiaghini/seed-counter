@@ -415,24 +415,3 @@ def process_color_image(
         plot=plot,
     )
     return total, colored
-
-
-# Method for counting seeds based on brightness at the center of the seed (useful when brightness changes outwards from center)
-def count_seeds(image_path: str) -> int:
-    # Load the image
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    # Apply Gaussian blur to the image
-    blurred = cv2.GaussianBlur(image, (25, 25), 0)
-    # blurred = cv2.medianBlur(image, 15)
-
-    # Apply thresholding
-    _, thresh = cv2.threshold(blurred, 200, 255, cv2.THRESH_BINARY)
-
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=8)
-
-    plot_full(thresh)
-
-    num_seeds = num_labels - 1
-
-    return int(num_seeds)
