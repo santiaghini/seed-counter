@@ -46,7 +46,7 @@ def mask_red_marker(
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     core = cv2.dilate(core, kernel, iterations=1)  # puts back ~1 px
 
-    return marker
+    return core
 
 
 def normalize_seeds_bright(image):
