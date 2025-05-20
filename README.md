@@ -54,10 +54,11 @@ python run.py --dir ./images --output ./output_directory --mode fluorescence --i
 - `-n, --nostore`: flag, if present, does not store the processed images with contours for counting, only the final results in .csv format. Default is `False`.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
 - `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
-- `-r, --radial_thresh`: radial threshold to capture seeds (float). This value balances how many smalls seeds are captured versus how many seeds can be separated if together. Usually, range for this value should be around `8.0` and `16.0`. Read [Debugging]() below to tune this value. By default this value is set automatically using the median seed area in the image.
+- `-r, --radial_thresh`: radial distance threshold for seed separation. Usually ranges from `8.0` to `16.0`. If omitted, this value is computed automatically.
+- `--radial_threshold_ratio`: ratio of the median seed radius used when computing the radial threshold automatically. Default is `0.4`.
+- `--large_area_factor`: factor to filter out objects larger than this multiple of the median seed area. Default is `20`.
 - `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images.
 - `--mode`: either `fluorescence` (default) or `color`.
-- `--marker_color`: hex color for marker seeds when running in color mode.
 
 You can get details of all arguments by running:
 ```bash
@@ -65,7 +66,7 @@ python run.py --help
 ```
 
 ### Debugging
-In some cases, seeds might not be separated properly or some seeds might be left out from the final result. There are two parameters to make adjustments and fix this.
+In some cases, seeds might not be separated properly or some seeds might be left out from the final result. The following parameters can be tuned to improve the results.
 
 `--intensity_thresh`
 - If the seeds are too dim and are not being segmented, try decreasing the threshold (default is `30`).
@@ -76,6 +77,14 @@ In some cases, seeds might not be separated properly or some seeds might be left
 - This parameter has a direct tradeoff between capturing small seeds and separating those that are together. A low value captures small seeds (but doesn't separate very well) and a high value separates well (but leaves out small seeds).
 - If there are seeds that are smaller and are not captured, try setting a low value (e.g. `10.0`).
 - If there most seeds have the same size and there are many seeds that weren't separated properly, try setting a high value (e.g. `16.0`)
+
+`--radial_threshold_ratio`
+- Increase this ratio if seeds are not well separated.
+- Decrease it if small seeds are being missed.
+
+`--large_area_factor`
+- Lower this value to aggressively remove large clumps or artifacts.
+- Increase it if legitimate large seeds are being removed.
 
 ## Image Acquisition
 
