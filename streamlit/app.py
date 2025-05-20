@@ -263,7 +263,10 @@ with st.expander("**Instructions** (click to expand)"):
 st.subheader("Upload your images")
 
 mode_option = st.radio(
-    "Select counting mode", ["Fluorescence", "Color"], horizontal=True
+    "Select counting mode",
+    ["Fluorescence", "Color"],
+    horizontal=True,
+    help="Fluorescence: paired FL/BF images. Color: single RGB images",
 )
 RUN_PARAMS["mode"] = "fluorescence" if mode_option == "Fluorescence" else "color"
 
@@ -275,7 +278,11 @@ else:
 if st.session_state.clicked_run:
     st.button("Reset", on_click=click_reset_button)
 
-uploaded_files = st.file_uploader(uploader_text, accept_multiple_files=True)
+uploaded_files = st.file_uploader(
+    uploader_text,
+    accept_multiple_files=True,
+    help="Load the images for this run. You can drag multiple files at once.",
+)
 
 st.markdown(":gray[*Pro Tip: To clear all uploaded files, reload the page.*]")
 
@@ -291,17 +298,21 @@ with st.expander("**Parameters for manual setup**"):
             "Enable Brightfield suffix",
             value=True,
             disabled=RUN_PARAMS["mode"] == "color",
+            help="Check to override the default brightfield filename suffix",
         )
         RUN_PARAMS["bf_suffix"] = st.text_input(
             "Brightfield suffix",
             value=DEFAULT_BRIGHTFIELD_SUFFIX,
             disabled=(not enable_bf_suffix or RUN_PARAMS["mode"] != "fluorescence"),
+            help="Suffix that identifies brightfield images (e.g. 'BF')",
         )
         if not enable_bf_suffix:
             RUN_PARAMS["bf_suffix"] = None
 
         enable_bf_thresh = st.checkbox(
-            "Enable Brightfield Intensity Threshold", value=False
+            "Enable Brightfield Intensity Threshold",
+            value=False,
+            help="Override automatic thresholding for the brightfield image",
         )
         RUN_PARAMS["bf_intensity_thresh"] = st.slider(
             "Brightfield Intensity Threshold",
@@ -309,11 +320,16 @@ with st.expander("**Parameters for manual setup**"):
             255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX],
             disabled=not enable_bf_thresh,
+            help="Lower to capture dim seeds, raise to reduce background",
         )
         if not enable_bf_thresh:
             RUN_PARAMS["bf_intensity_thresh"] = None
 
-        enable_radial_thresh = st.checkbox("Enable Radial Threshold Ratio", value=False)
+        enable_radial_thresh = st.checkbox(
+            "Enable Radial Threshold Ratio",
+            value=False,
+            help="Control how seeds touching each other are split",
+        )
         RUN_PARAMS["radial_threshold_ratio"] = st.slider(
             "Radial Threshold Ratio",
             th_min,
@@ -321,6 +337,7 @@ with st.expander("**Parameters for manual setup**"):
             float(RADIAL_THRESH_DEFAULT),
             step=0.01,
             disabled=not enable_radial_thresh,
+            help="Fraction of median seed radius used for separation",
         )
         if not enable_radial_thresh:
             RUN_PARAMS["radial_threshold_ratio"] = None
@@ -330,17 +347,21 @@ with st.expander("**Parameters for manual setup**"):
             "Enable Fluorescent suffix",
             value=True,
             disabled=RUN_PARAMS["mode"] == "color",
+            help="Check to override the default fluorescent filename suffix",
         )
         RUN_PARAMS["fl_suffix"] = st.text_input(
             "Fluorescent suffix",
             value=DEFAULT_FLUORESCENT_SUFFIX,
             disabled=(not enable_fl_suffix or RUN_PARAMS["mode"] != "fluorescence"),
+            help="Suffix that identifies fluorescent images (e.g. 'FL')",
         )
         if not enable_fl_suffix:
             RUN_PARAMS["fl_suffix"] = None
 
         enable_fl_thresh = st.checkbox(
-            "Enable Fluorescent Intensity Threshold", value=False
+            "Enable Fluorescent Intensity Threshold",
+            value=False,
+            help="Override automatic thresholding for the fluorescent image",
         )
         RUN_PARAMS["fl_intensity_thresh"] = st.slider(
             "Fluorescent Intensity Threshold",
@@ -348,11 +369,16 @@ with st.expander("**Parameters for manual setup**"):
             255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX],
             disabled=not enable_fl_thresh,
+            help="Lower to capture dim seeds, raise to reduce background",
         )
         if not enable_fl_thresh:
             RUN_PARAMS["fl_intensity_thresh"] = None
 
-        enable_large_area_factor = st.checkbox("Enable Large Area Factor", value=False)
+        enable_large_area_factor = st.checkbox(
+            "Enable Large Area Factor",
+            value=False,
+            help="Filter out objects much larger than a typical seed",
+        )
         RUN_PARAMS["large_area_factor"] = st.slider(
             "Large Area Factor (for removal)",
             1.0,
@@ -360,9 +386,10 @@ with st.expander("**Parameters for manual setup**"):
             float(LARGE_AREA_FACTOR_DEFAULT),
             step=1.0,
             disabled=not enable_large_area_factor,
+            help="Objects bigger than this multiple of the median area are ignored",
         )
         if not enable_large_area_factor:
-            RUN_PARAMS["enable_large_area_factor"] = None
+            RUN_PARAMS["large_area_factor"] = None
 
     st.divider()
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):
