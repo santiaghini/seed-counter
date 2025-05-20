@@ -24,34 +24,6 @@ def plot_full(img: np.ndarray, title: str = '', cmap: str = 'jet') -> None:
     plt.show()
 
 def plot_all(plots: list[tuple[np.ndarray, str, str | None]]) -> None:
-    # assert len(plots) == 7, "This function is designed for 7 plots. If you need more or less, please modify the function."
-    # default_cmap = 'jet'
-    # num_plots = len(plots)
-    # num_cols = 3
-    # num_rows = 2
-
-    # # Create a figure with a larger size
-    # fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 5 * num_rows))
-
-    # # Flatten the axes array for easy iteration
-    # axes = axes.flatten()
-
-    # for ax, (image, title, cmap) in zip(axes, plots):
-    #     cmap = cmap if cmap else default_cmap
-    #     ax.imshow(image, cmap=cmap)
-    #     ax.set_title(title)
-    #     ax.axis('off')
-
-    # # Hide any unused subplots
-    # for ax in axes[num_plots:]:
-    #     ax.axis('off')
-
-    # plt.tight_layout()
-    # plt.show()
-
-    # # Last plot is full screen (final result)
-    # plot_full(*plots[-1])
-
     num_plots = len(plots)
     if num_plots == 0:
         return

@@ -8,7 +8,7 @@ from config import (
     DEFAULT_BRIGHTFIELD_SUFFIX,
     DEFAULT_FLUORESCENT_SUFFIX,
 )
-from utils import plot_all, plot_full
+from utils import plot_all
 
 
 def mask_red_marker(
@@ -58,12 +58,6 @@ def mask_red_marker(
     return marker
 
 
-def enhance_contrast(gray_img: np.ndarray) -> np.ndarray:
-    """Enhance contrast using CLAHE (adaptive histogram equalization)."""
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    return clahe.apply(gray_img)
-
-
 def normalize_seeds_bright(image):
     """
     Ensures seeds are always the high (bright) values in the image.
@@ -85,7 +79,17 @@ def normalize_seeds_bright(image):
     return normalized
 
 
-def dt_threshold_from_median(num_areas, area_labels, areas_stats, median_area, median_mask, seed_mask, dist_transform, frac=0.40, area_tol=0.25):
+def dt_threshold_from_median(
+        num_areas,
+        area_labels,
+        areas_stats,
+        median_area,
+        median_mask,
+        seed_mask,
+        dist_transform,
+        frac=0.40,
+        area_tol=0.25
+    ):
     lo, hi   = median_area * (1 - area_tol), median_area * (1 + area_tol)
 
     # 3. build mask of seeds whose area ≈ median
@@ -100,21 +104,21 @@ def dt_threshold_from_median(num_areas, area_labels, areas_stats, median_area, m
     return dt_thresh
 
 
-def dt_threshold_from_reference(dist_transform, ref_radius_px: int = 10, ref_dt_thresh: int = 10):
-    from scipy import ndimage
+# def dt_threshold_from_reference(dist_transform, ref_radius_px: int = 10, ref_dt_thresh: int = 10):
+#     from scipy import ndimage
 
-    # --- estimate current seed radius ---------------------------
-    #     • find local maxima of dt  (centre of each seed)
-    peaks = (dist_transform == ndimage.maximum_filter(dist_transform, size=7)) & (dist_transform > 0)
-    peak_vals = dist_transform[peaks]                       # one value ≈ radius for each seed
-    curr_radius_px = np.median(peak_vals)       # robust against odd seeds
+#     # --- estimate current seed radius ---------------------------
+#     #     • find local maxima of dt  (centre of each seed)
+#     peaks = (dist_transform == ndimage.maximum_filter(dist_transform, size=7)) & (dist_transform > 0)
+#     peak_vals = dist_transform[peaks]                       # one value ≈ radius for each seed
+#     curr_radius_px = np.median(peak_vals)       # robust against odd seeds
 
-    # --- scale the reference threshold --------------------------
-    scale      = curr_radius_px / ref_radius_px
-    dt_thresh  = ref_dt_thresh * scale
-    print(f"median seed radius = {curr_radius_px:.2f}px  |  "
-          f"scale = {scale:.2f}  |  DT threshold = {dt_thresh:.2f}")
-    return dt_thresh
+#     # --- scale the reference threshold --------------------------
+#     scale      = curr_radius_px / ref_radius_px
+#     dt_thresh  = ref_dt_thresh * scale
+#     print(f"median seed radius = {curr_radius_px:.2f}px  |  "
+#           f"scale = {scale:.2f}  |  DT threshold = {dt_thresh:.2f}")
+#     return dt_thresh
 
 
 def process_seed_image(
@@ -128,7 +132,6 @@ def process_seed_image(
     plot: bool = False,
     remove_scale_bar: bool = True,
     radial_threshold_ratio = 0.4,
-    radial_threshold_mode: str = "auto_infer",
 ) -> int:
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
@@ -148,11 +151,8 @@ def process_seed_image(
     # to ensure that the seeds are always the high (bright) values in the image.
     L_norm = normalize_seeds_bright(L)
 
-    # FIXME: normalize size of the image
-
     # Eliminate scale bar
     if remove_scale_bar:
-        # gray[-50:, :500] = 0
         L_norm[-50:, :500] = 0
 
     if plot:
@@ -249,23 +249,15 @@ def process_seed_image(
 
     # sure background area
     sure_bg = cv2.dilate(opening,kernel,iterations=3)
-    # eroded = cv2.erode(opening, kernel, iterations=3)
 
     # Finding sure foreground area
     dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
 
     if not radial_threshold:
-        # radial_threshold = 50
-        if radial_threshold_mode == "from_ref":
-            radial_threshold = dt_threshold_from_reference(dist_transform)
-        elif radial_threshold_mode == "auto_infer":
-            radial_threshold = dt_threshold_from_median(
-                num_areas=num_labels, area_labels=labels, areas_stats=stats, median_area=median_area, median_mask=median_area_mask, seed_mask=opening, dist_transform=dist_transform, frac=radial_threshold_ratio
-            )
-        else:
-            raise ValueError(f"Unknown mode: {radial_threshold_mode}")
-        # radial_threshold = get_radial_thresh(median_area)
-    # radial_threshold = max(radial_threshold, 0.3 * dist_transform.max())
+        radial_threshold = dt_threshold_from_median(
+            num_areas=num_labels, area_labels=labels, areas_stats=stats, median_area=median_area, median_mask=median_area_mask, seed_mask=opening, dist_transform=dist_transform, frac=radial_threshold_ratio
+        )
+
     # Get centers of components from threshold
     ret, sure_fg = cv2.threshold(dist_transform, radial_threshold, 255, 0)
     
@@ -374,10 +366,10 @@ def process_seed_image(
 def process_color_image(
     image_path: str,
     sample_name: str,
-    rgb_color: tuple[int, int, int],
-    bf_thresh: int,
-    fl_thresh: int,
-    radial_thresh: float | None,
+    bf_thresh: int | None = None,
+    fl_thresh: int | None = None,
+    radial_threshold: float | None = None,
+    radial_threshold_ratio: float = 0.4,
     output_dir: str | None = None,
     plot: bool = False,
 ) -> tuple[int, int]:
@@ -387,8 +379,9 @@ def process_color_image(
         image=original,
         img_type=DEFAULT_BRIGHTFIELD_SUFFIX,
         sample_name=sample_name,
-        initial_brightness_thresh=None,
-        radial_threshold=radial_thresh,
+        initial_brightness_thresh=bf_thresh,
+        radial_threshold=radial_threshold,
+        radial_threshold_ratio=radial_threshold_ratio,
         output_dir=output_dir,
         plot=plot,
         image_L=None,
@@ -401,7 +394,8 @@ def process_color_image(
         img_type=DEFAULT_FLUORESCENT_SUFFIX,
         sample_name=sample_name,
         initial_brightness_thresh=fl_thresh,
-        radial_threshold=radial_thresh,
+        radial_threshold=radial_threshold,
+        radial_threshold_ratio=radial_threshold_ratio,
         output_dir=output_dir,
         plot=plot,
     )
