@@ -55,7 +55,7 @@ RUN_PARAMS = {
     'fl_intensity_thresh': None,
     'radial_thresh': None,
     'mode': 'fluorescence',
-    'marker_color': '#ff0000',
+    'marker_color': "#ff0000",  # in RGB mode this is the hex value of the marker color (e.g. "#ff0000" for red)
 }
 PREFIX_TO_FILENAMES = None
 
@@ -159,7 +159,7 @@ def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]
     BATCH_ID = get_batch_id()
     batch_dir, input_dir, output_dir = create_folders(BATCH_ID)
 
-    sample_to_files = load_files(parsed_filenames, input_dir, run_params['mode'])
+    sample_to_files = load_files(parsed_filenames, input_dir)
     results: List[Result] = None
 
     print(f"sample_to_filenames: {sample_to_files}")
@@ -227,7 +227,7 @@ with st.expander("**Instructions** (click to expand)"):
     st.subheader("Instructions")
     st.markdown(INSTRUCTIONS_TEXT)
 
-st.header("Upload your images")
+st.subheader("Upload your images")
 
 mode_option = st.radio("Select counting mode", ["Fluorescence", "Color"], horizontal=True)
 RUN_PARAMS['mode'] = 'fluorescence' if mode_option == 'Fluorescence' else 'color'
@@ -246,6 +246,7 @@ st.markdown(":gray[*Pro Tip: To clear all uploaded files, reload the page.*]")
 
 ### Parameter box
 with st.expander("**Parameters for manual setup**"):
+    # FIXME: completely customize depending on the mode.
     # if not st.session_state.expanded_params:
     #     st.session_state.expanded_params = True
 
@@ -291,11 +292,7 @@ if st.session_state.clicked_run:
 
     run_results = st.session_state.run_results
 
-    # with st.spinner('Processing images...'):
-    #     while run_results['results'] is None:
-    #         pass
-
-    st.header("Results")
+    st.subheader("Results")
 
     with st.expander("__Logs__"):
         for line in st.session_state.logs_content.split('\n'):
@@ -323,7 +320,7 @@ if st.session_state.clicked_run:
             mime='text/csv',
         )
 
-        st.header("Output Images with Seeds Highlighted")
+        st.subheader("Output Images with Seeds Highlighted")
 
         # results list to dict
         results_dict: Dict[str, Result] = results_list_to_dict(run_results['results'])

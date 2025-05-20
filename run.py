@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import cv2
 import os
 
 from config import (
@@ -70,16 +71,17 @@ def process_batch(
             file_path = file_obj['file_path']
             filename = file_obj['file_name']
             img_type = file_obj['img_type']
-            
+
+            image = cv2.imread(file_path)
             if img_type == bf_suffix:
                 yield f'\t{bf_suffix} (brightfield) image: {filename}'
                 img_type_name = DEFAULT_BRIGHTFIELD_SUFFIX
-                total_seeds = process_seed_image(file_path, img_type_name, sample_name, bf_thresh, radial_thresh, batch_output_dir, plot=plot)
+                total_seeds = process_seed_image(image, img_type_name, sample_name, bf_thresh, radial_thresh, batch_output_dir, plot=plot)
                 result.total_seeds = total_seeds
             elif img_type == fl_suffix:
                 yield f'\t{fl_suffix} (fluorescent) image: {filename}'
                 img_type_name = DEFAULT_FLUORESCENT_SUFFIX
-                fl_seeds = process_seed_image(file_path, img_type_name, sample_name, fl_thresh, radial_thresh, batch_output_dir, plot=plot)
+                fl_seeds = process_seed_image(image, img_type_name, sample_name, fl_thresh, radial_thresh, batch_output_dir, plot=plot)
                 result.fl_seeds = fl_seeds
             else:
                 yield f'\tUnknown image type for {filename}'
@@ -105,10 +107,13 @@ def process_color_batch(
 ) -> Iterator[str | List[Result]]:
     """Process a batch of single RGB images."""
 
+    print(f"{sample_to_file=}")
     results = []
     for i, sample_name in enumerate(sorted(sample_to_file.keys())):
         yield f'Processing sample {sample_name} ({i+1} of {len(sample_to_file)}):'
-        file_path = sample_to_file[sample_name]['file_path']
+        print(f"{sample_to_file[sample_name]=}")
+        assert len(sample_to_file[sample_name]), "Sample should have only one image"
+        file_path = sample_to_file[sample_name][0]['file_path']
         total, colored = process_color_image(
             file_path,
             sample_name,
@@ -193,7 +198,7 @@ def collect_img_files(
 
 def collect_single_img_files(
     input_dir: str,
-) -> tuple[Dict[str, Dict[str, str]], List[str]]:
+) -> tuple[Dict[str, List[Dict[str, str]]], List[str]]:
     file_names = [
         f
         for f in os.listdir(input_dir)
@@ -208,7 +213,7 @@ def collect_single_img_files(
             'file_path': os.path.join(input_dir, filename),
             'file_name': filename,
         }
-        sample_to_file[sample_name] = file_obj
+        sample_to_file[sample_name] = [file_obj]
 
     return sample_to_file, file_names
 

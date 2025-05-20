@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
+import matplotlib
+matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
 
 from config import (
@@ -17,114 +19,221 @@ REF_RADIAL_THRESH = 8
 REF_MEDIAN_AREA = 1250
 
 
-def mask_by_color(
+def mask_red_marker(
     image: np.ndarray,
-    rgb_color: tuple[int, int, int],
-    h_margin: int = 10,
-    sv_margin: int = 80,
 ) -> np.ndarray:
-    """Return ``image`` masked by pixels close to ``rgb_color``.
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    L, a, b = cv2.split(lab)
 
-    The color range is computed in HSV space because it is more robust for
-    segmentation by color. OpenCV uses the hue range [0, 179] for 8-bit images,
-    hence the cap at 179 when expanding the hue margin.
+    thr_L, seeds_mask = cv2.threshold(
+        L, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
+    )
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    seeds_mask = cv2.morphologyEx(seeds_mask, cv2.MORPH_OPEN, kernel, 1)
+
+    # ────────────────────────────────────────────────────────────────
+    # 2.  NON-marker seeds  = yellow / tan  → high b*
+    #     • analyse b* *only* inside the seed mask
+    #     • let Otsu find the valley between “tan” and “not-tan”
+    # ────────────────────────────────────────────────────────────────
+    thr_marker, non_marker = cv2.threshold(b, 50, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    # At this point:  white = high-b* seeds  (yellows/tans)  
+    #                 black = lower-b* seeds  (reds / purples / anything else)
+
+    non_marker = cv2.bitwise_and(non_marker, seeds_mask)      # remove stray BG hits
+
+    # ────────────────────────────────────────────────────────────────
+    # 3.  MARKER-positive seeds  = all_seeds ⊖ non_marker
+    # ────────────────────────────────────────────────────────────────
+    marker = cv2.bitwise_xor(seeds_mask, non_marker)
+
+    # optional clean-up (little specks, gaps)
+    marker  = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel, 1)
+
+    # ---------------------------------------------------------------
+    #  A. distance-transform: keep only pixels ≥ 2 px from any hole
+    # ---------------------------------------------------------------
+    dist   = cv2.distanceTransform(marker, cv2.DIST_L2, 5)
+    core   = (dist > 2).astype(np.uint8) * 255   # adjust 2 → 3 if rims persist
+
+    # ---------------------------------------------------------------
+    # optional: restore original seed size if you shrank it too much
+    # ---------------------------------------------------------------
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+    core   = cv2.dilate(core, kernel, iterations=1)   # puts back ~1 px
+
+
+    return marker
+
+
+def enhance_contrast(gray_img: np.ndarray) -> np.ndarray:
+    """Enhance contrast using CLAHE (adaptive histogram equalization)."""
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    return clahe.apply(gray_img)
+
+
+def normalize_seeds_bright(image):
     """
+    Ensures seeds are always the high (bright) values in the image.
+    Works for both grayscale and color images.
+    """
+    # Convert to grayscale if image is color
+    L_img = image.copy()
 
-    color_bgr = np.uint8([[rgb_color[::-1]]])  # OpenCV uses BGR ordering
-    color_hsv = cv2.cvtColor(color_bgr, cv2.COLOR_BGR2HSV)[0][0]
-    lower = np.array(
-        [
-            max(color_hsv[0] - h_margin, 0),
-            max(color_hsv[1] - sv_margin, 0),
-            max(color_hsv[2] - sv_margin, 0),
-        ]
-    )
-    upper = np.array(
-        [
-            min(color_hsv[0] + h_margin, 179),  # Hue max value is 179 in OpenCV
-            min(color_hsv[1] + sv_margin, 255),
-            min(color_hsv[2] + sv_margin, 255),
-        ]
-    )
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lower, upper)
-    return cv2.bitwise_and(image, image, mask=mask)
+    # Flatten and find the mode (most common pixel value)
+    pixels = L_img.flatten()
+    mode_val = np.bincount(pixels).argmax()
+
+    # If background is bright (mode > 127), seeds are dark: invert
+    if mode_val > 127:
+        normalized = cv2.bitwise_not(L_img)
+    else:
+        normalized = L_img
+
+    return normalized
 
 
-def get_radial_thresh(median_area: float) -> float:
-    """Return a radial threshold scaled to ``median_area``."""
-    radial_thresh = median_area * REF_RADIAL_THRESH / REF_MEDIAN_AREA
-    return float(radial_thresh)
+def dt_threshold_from_median(num_areas, area_labels, areas_stats, median_area, median_mask, seed_mask, dist_transform, frac=0.40, area_tol=0.25):
+    lo, hi   = median_area * (1 - area_tol), median_area * (1 + area_tol)
+
+    # 3. build mask of seeds whose area ≈ median
+    median_mask = np.zeros_like(seed_mask, np.uint8)
+    for cid in range(1, num_areas):
+        if lo <= areas_stats[cid, cv2.CC_STAT_AREA] <= hi:
+            median_mask[area_labels == cid] = 255
+
+    # 4. “median radius” = max DT value among those seeds
+    median_radius = dist_transform[median_mask > 0].max()
+    dt_thresh     = median_radius * frac
+    return dt_thresh
+
+
+def dt_threshold_from_reference(dist_transform, ref_radius_px: int = 10, ref_dt_thresh: int = 10):
+    from scipy import ndimage
+
+    # --- estimate current seed radius ---------------------------
+    #     • find local maxima of dt  (centre of each seed)
+    peaks = (dist_transform == ndimage.maximum_filter(dist_transform, size=7)) & (dist_transform > 0)
+    peak_vals = dist_transform[peaks]                       # one value ≈ radius for each seed
+    curr_radius_px = np.median(peak_vals)       # robust against odd seeds
+
+    # --- scale the reference threshold --------------------------
+    scale      = curr_radius_px / ref_radius_px
+    dt_thresh  = ref_dt_thresh * scale
+    print(f"median seed radius = {curr_radius_px:.2f}px  |  "
+          f"scale = {scale:.2f}  |  DT threshold = {dt_thresh:.2f}")
+    return dt_thresh
 
 
 def process_seed_image(
-    image_path: str | None,
+    image: np.ndarray,
     img_type: str,
     sample_name: str,
     initial_brightness_thresh: int | None,
     radial_threshold: float | None,
+    image_L: np.ndarray | None,
     output_dir: str | None = None,
     plot: bool = False,
-    *,
-    image: np.ndarray | None = None,
+    remove_scale_bar: bool = True,
+    radial_threshold_ratio = 0.4,
+    radial_threshold_mode: str = "auto_infer",
 ) -> int:
-    """Process ``image_path`` or ``image`` and return the number of detected seeds."""
+    """Process ``image`` and return the number of detected seeds."""
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
 
     if img_type not in [DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX]:
         raise Exception(f'Image type must be either {DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) or {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent)')
     
-    if not initial_brightness_thresh:
-        initial_brightness_thresh = INITIAL_BRIGHTNESS_THRESHOLDS[img_type]
-    
-    # Load the image
-    if image is None:
-        if image_path is None:
-            raise ValueError('Either image_path or image must be provided')
-        image = cv2.imread(image_path)
+    # Only convert to LAB and split if image has 3 channels (i.e., is color)
+    if image_L is None and len(image.shape) == 3 and image.shape[2] == 3:
+        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+        L, a, b = cv2.split(lab)  # keep only L as the lightness channel
+    else:
+        # If already single channel, assume this is L
+        L = image_L
 
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    if img_type == DEFAULT_BRIGHTFIELD_SUFFIX:
-        gray = cv2.bitwise_not(gray)
+    # We expect seeds to be the bright regions in the image, so we normalize the L channel
+    # to ensure that the seeds are always the high (bright) values in the image.
+    L_norm = normalize_seeds_bright(L)
+
+    # FIXME: normalize size of the image
 
     # Eliminate scale bar
-    gray[-50:, :500] = 0
+    if remove_scale_bar:
+        # gray[-50:, :500] = 0
+        L_norm[-50:, :500] = 0
 
     if plot:
-        plots.append((gray, 'Grayscale image', 'gray'))
+        plots.append((L_norm, 'Grayscale image', 'gray'))
 
     # Threshold the unique channel image to isolate bright regions
-    _, thresholded = cv2.threshold(gray, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
+    if not initial_brightness_thresh:
+        threshold_value, thresholded_img  = cv2.threshold(L, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_TRIANGLE)
+    else:
+        threshold_value, thresholded_img = cv2.threshold(L_norm, initial_brightness_thresh, 255, cv2.THRESH_BINARY)
 
-    # Segment by component areas
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded, connectivity=8)
-
-    # Get the areas of all components
-    areas = stats[1:, cv2.CC_STAT_AREA]
+    print(f"Threshold value: {threshold_value}")
 
     if plot:
-        plots.append((thresholded, 'Thresholded image', None))
+        plots.append((thresholded_img, 'Thresholded image', None))
+
+    # Segment by component areas
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded_img, connectivity=8)
+
+    # Get the areas of all components
+    areas = stats[1:, cv2.CC_STAT_AREA]  # Exclude the background, which is the first label
 
     ####### START Filter small areas
-    # Get indices of all areas smaller than SMALL_AREA
-    idxs_small_area = np.where(areas < SMALL_AREA_PRE_PASS)[0] + 1
+    SMALL_AREA_FACTOR = 0.1
+    area_95th = np.percentile(areas, 95)
+    idxs_small_area = np.where(areas < area_95th * SMALL_AREA_FACTOR)[0] + 1
 
     # Create a mask for small areas
     mask_small = np.isin(labels, idxs_small_area)
 
-    # Remove areas smaller than SMALL_AREA
-    thresholded[mask_small] = 0
+    # Remove areas smaller than median_area * SMALL_AREA_FACTOR
+    thresholded_img[mask_small] = 0
     ####### END Filter small areas
 
+    # filter again since we removed small areas
+    # Segment by component areas
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded_img, connectivity=8)
+
+    # Get the areas of all components
+    areas = stats[1:, cv2.CC_STAT_AREA]  # Exclude the background, which is the first label
+
+    # --- Filter very large areas ---
+    # Remove the top five largest areas if they are much larger than the median area
+    median_area = np.median(areas)
+    LARGE_AREA_FACTOR = 20
+
+    # stats already computed with cv2.connectedComponentsWithStats
+    if median_area == 0:
+        raise RuntimeError("No valid seed area found")
+
+    # labels to drop (indices are 0-based w.r.t. 'areas', so +1 later)
+    too_big = np.where(areas > LARGE_AREA_FACTOR * median_area)[0]
+
+    # keep at most the 5 largest, if you really need the limit
+    if too_big.size > 5:
+        top5 = too_big[np.argsort(areas[too_big])[-5:]]
+        too_big = top5
+
+    thresholded_img_pre_remove_big_areas = np.copy(thresholded_img)
+
+    # zero them in one shot
+    for lbl in too_big + 1:          # +1 because label 0 = background
+        thresholded_img[labels == lbl] = 0
+
     # get updated areas
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded, connectivity=8)
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresholded_img, connectivity=8)
 
     # Get the areas of all components
     areas = stats[1:, cv2.CC_STAT_AREA]
 
     if plot:
-        plots.append((thresholded, 'Thresholded image (filtered small areas)', None))
+        plots.append((thresholded_img, 'Thresholded image (filtered small areas)', None))
 
     ####### START Obtain and verify median area
     median_area = np.median(areas)
@@ -136,7 +245,7 @@ def process_seed_image(
         median_area = np.median(temp_areas)
 
     median_area_label = np.where(areas == median_area)[0][0] + 1
-    median_area_mask = np.zeros(thresholded.shape, dtype="uint8")
+    median_area_mask = np.zeros(thresholded_img.shape, dtype="uint8")
     median_area_mask[labels == median_area_label] = 255
     if plot:
         plots.append((median_area_mask, 'Median area mask', 'gray'))
@@ -145,7 +254,7 @@ def process_seed_image(
 
     # noise removal
     kernel = np.ones((3,3),np.uint8)
-    opening = cv2.morphologyEx(thresholded, cv2.MORPH_OPEN, kernel, iterations=2)
+    opening = cv2.morphologyEx(thresholded_img, cv2.MORPH_OPEN, kernel, iterations=2)
 
     # sure background area
     sure_bg = cv2.dilate(opening,kernel,iterations=3)
@@ -155,7 +264,17 @@ def process_seed_image(
     dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
 
     if not radial_threshold:
-        radial_threshold = get_radial_thresh(median_area)
+        # radial_threshold = 50
+        if radial_threshold_mode == "from_ref":
+            radial_threshold = dt_threshold_from_reference(dist_transform)
+        elif radial_threshold_mode == "auto_infer":
+            radial_threshold = dt_threshold_from_median(
+                num_areas=num_labels, area_labels=labels, areas_stats=stats, median_area=median_area, median_mask=median_area_mask, seed_mask=opening, dist_transform=dist_transform, frac=radial_threshold_ratio
+            )
+        else:
+            raise ValueError(f"Unknown mode: {radial_threshold_mode}")
+        # radial_threshold = get_radial_thresh(median_area)
+    # radial_threshold = max(radial_threshold, 0.3 * dist_transform.max())
     # Get centers of components from threshold
     ret, sure_fg = cv2.threshold(dist_transform, radial_threshold, 255, 0)
     
@@ -231,7 +350,7 @@ def process_seed_image(
     # Now, mark the region of unknown with zero
     markers[unknown==255] = 0
     # Perform watershed
-    markers = cv2.watershed(image,markers)
+    markers = cv2.watershed(image, markers)
     ####### END Watershed
 
     if plot:
@@ -242,12 +361,13 @@ def process_seed_image(
     mask = markers == -1
     dilated_mask = cv2.dilate(mask.astype(np.uint8), kernel, iterations=1)
 
-    image[dilated_mask == 1] = [255,255,0]
+    image_with_contours_dil = image.copy()
+    image_with_contours_dil[dilated_mask == 1] = [255,255,0]
 
     # Plot the original image with contours
-    image_with_contours = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image_with_contours_final = cv2.cvtColor(image_with_contours_dil, cv2.COLOR_BGR2RGB)
     if plot:
-        plots.append((image_with_contours, 'Image with contours', None))
+        plots.append((image_with_contours_final, 'Image with contours', None))
 
     if output_dir is not None:
         cv2.imwrite(f'{output_dir}/{sample_name}_{img_type}_brightness{initial_brightness_thresh}_radial{radial_threshold}_contours.png', image)
@@ -271,27 +391,28 @@ def process_color_image(
     plot: bool = False,
 ) -> tuple[int, int]:
     """Process a single RGB image for total and colored seeds."""
+    original = cv2.imread(image_path)
     total = process_seed_image(
-        image_path,
-        DEFAULT_BRIGHTFIELD_SUFFIX,
-        sample_name,
-        bf_thresh,
-        radial_thresh,
-        output_dir,
+        image=original,
+        img_type=DEFAULT_BRIGHTFIELD_SUFFIX,
+        sample_name=sample_name,
+        initial_brightness_thresh=None,
+        radial_threshold=radial_thresh,
+        output_dir=output_dir,
         plot=plot,
+        image_L=None,
     )
 
-    original = cv2.imread(image_path)
-    masked = mask_by_color(original, rgb_color)
+    red_masked = mask_red_marker(original)
     colored = process_seed_image(
-        None,
-        DEFAULT_FLUORESCENT_SUFFIX,
-        sample_name,
-        fl_thresh,
-        radial_thresh,
-        output_dir,
+        image=original,
+        image_L=red_masked,
+        img_type=DEFAULT_FLUORESCENT_SUFFIX,
+        sample_name=sample_name,
+        initial_brightness_thresh=fl_thresh,
+        radial_threshold=radial_thresh,
+        output_dir=output_dir,
         plot=plot,
-        image=masked,
     )
     return total, colored
 

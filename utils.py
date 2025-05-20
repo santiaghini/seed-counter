@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+import math
 import os
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,18 +24,55 @@ def plot_full(img: np.ndarray, title: str = '', cmap: str = 'jet') -> None:
     plt.show()
 
 def plot_all(plots: list[tuple[np.ndarray, str, str | None]]) -> None:
-    assert len(plots) == 7, "This function is designed for 7 plots. If you need more or less, please modify the function."
-    default_cmap = 'jet'
+    # assert len(plots) == 7, "This function is designed for 7 plots. If you need more or less, please modify the function."
+    # default_cmap = 'jet'
+    # num_plots = len(plots)
+    # num_cols = 3
+    # num_rows = 2
+
+    # # Create a figure with a larger size
+    # fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 5 * num_rows))
+
+    # # Flatten the axes array for easy iteration
+    # axes = axes.flatten()
+
+    # for ax, (image, title, cmap) in zip(axes, plots):
+    #     cmap = cmap if cmap else default_cmap
+    #     ax.imshow(image, cmap=cmap)
+    #     ax.set_title(title)
+    #     ax.axis('off')
+
+    # # Hide any unused subplots
+    # for ax in axes[num_plots:]:
+    #     ax.axis('off')
+
+    # plt.tight_layout()
+    # plt.show()
+
+    # # Last plot is full screen (final result)
+    # plot_full(*plots[-1])
+
     num_plots = len(plots)
-    num_cols = 3
-    num_rows = 2
+    if num_plots == 0:
+        return
 
-    # Create a figure with a larger size
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, 5 * num_rows))
+    # Choose up to 3 columns for aesthetics, but you can change this
+    max_cols = 3
+    num_cols = min(num_plots, max_cols)
+    num_rows = math.ceil(num_plots / num_cols)
 
-    # Flatten the axes array for easy iteration
+    # Set figure size: 5x5 inches per subplot is a good default
+    fig_width = 5 * num_cols
+    fig_height = 5 * num_rows
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(fig_width, fig_height))
+
+    # If only one plot, axes is not an array
+    if num_plots == 1:
+        axes = np.array([axes])
+
     axes = axes.flatten()
 
+    default_cmap = 'jet'
     for ax, (image, title, cmap) in zip(axes, plots):
         cmap = cmap if cmap else default_cmap
         ax.imshow(image, cmap=cmap)

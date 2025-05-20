@@ -55,7 +55,7 @@ def dict_to_results_list(results_dict: Dict[str, Result]) -> List[Result]:
     return results_list
 
 
-def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str, mode: str) -> Dict[str, Any]:
+def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str) -> Dict[str, List[Dict[str, str]]]:
     # filter out non-image files
     parsed_filenames.sort(key=lambda obj: obj['file_name'])
 
@@ -75,10 +75,9 @@ def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str, mode: str
             'img_type': obj['img_type'],
         }
 
-        if mode == 'fluorescence':
-            sample_to_files.setdefault(sample_name, []).append(file_obj)
-        else:
-            sample_to_files[sample_name] = file_obj
+        if sample_name not in sample_to_files:
+            sample_to_files[sample_name] = []
+        sample_to_files[sample_name].append(file_obj)
 
     return sample_to_files
 
@@ -86,7 +85,7 @@ def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str, mode: str
 def run_batch(
     batch_id: str,
     run_params: Dict[str, Any],
-    sample_to_files: Dict[str, Any],
+    sample_to_files: Dict[str, List[str]],
     output_dir: str,
 ) -> Iterable[str | List[Result]]:
     bf_suffix = run_params['bf_suffix']
