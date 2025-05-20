@@ -14,9 +14,9 @@ sys.path.append(parent_dir)
 from utils import Result
 from run import process_fluorescent_batch, process_color_batch
 
-BATCHES_DIR = 'batches'
-INPUT_DIR = 'input'
-OUTPUT_DIR = 'output'
+BATCHES_DIR = "batches"
+INPUT_DIR = "input"
+OUTPUT_DIR = "output"
 
 
 def get_batch_id() -> str:
@@ -55,24 +55,26 @@ def dict_to_results_list(results_dict: Dict[str, Result]) -> List[Result]:
     return results_list
 
 
-def load_files(parsed_filenames: List[Dict[str, Any]], input_dir: str) -> Dict[str, List[Dict[str, str]]]:
+def load_files(
+    parsed_filenames: List[Dict[str, Any]], input_dir: str
+) -> Dict[str, List[Dict[str, str]]]:
     # filter out non-image files
-    parsed_filenames.sort(key=lambda obj: obj['file_name'])
+    parsed_filenames.sort(key=lambda obj: obj["file_name"])
 
     sample_to_files = {}
     # create directory for batch run
     for obj in parsed_filenames:
         # save the uploaded file in INPUT_DIR/batch_run/file.name
-        file = obj['file']
+        file = obj["file"]
         file_path = os.path.join(input_dir, file.name)
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(file.getbuffer())
 
-        sample_name = obj['sample_name']
+        sample_name = obj["sample_name"]
         file_obj = {
-            'file_path': file_path,
-            'file_name': file.name,
-            'img_type': obj['img_type'],
+            "file_path": file_path,
+            "file_name": file.name,
+            "img_type": obj["img_type"],
         }
 
         if sample_name not in sample_to_files:
@@ -88,17 +90,17 @@ def run_batch(
     sample_to_files: Dict[str, List[str]],
     output_dir: str,
 ) -> Iterable[str | List[Result]]:
-    bf_suffix = run_params['bf_suffix']
-    fl_suffix = run_params['fl_suffix']
-    bf_thresh = run_params['bf_intensity_thresh']
-    fl_thresh = run_params['fl_intensity_thresh']
-    radial_thresh = run_params['radial_thresh']
+    bf_suffix = run_params["bf_suffix"]
+    fl_suffix = run_params["fl_suffix"]
+    bf_thresh = run_params["bf_intensity_thresh"]
+    fl_thresh = run_params["fl_intensity_thresh"]
+    radial_thresh = run_params["radial_thresh"]
 
-    mode = run_params.get('mode', 'fluorescence')
+    mode = run_params.get("mode", "fluorescence")
 
-    yield f'Running batch {batch_id} with params: {run_params}'
+    yield f"Running batch {batch_id} with params: {run_params}"
     results = None
-    if mode == 'fluorescence':
+    if mode == "fluorescence":
         iterator = process_fluorescent_batch(
             sample_to_files,
             bf_thresh,
@@ -109,7 +111,7 @@ def run_batch(
             fl_suffix=fl_suffix,
         )
     else:
-        color = run_params['marker_color']
+        color = run_params["marker_color"]
         if isinstance(color, str):
             color = ImageColor.getrgb(color)
         iterator = process_color_batch(

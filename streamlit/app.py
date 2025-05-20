@@ -38,8 +38,13 @@ from utils import (
 from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 
 st.set_page_config(
-    page_title='SeedCounter by the Brophy Lab', menu_items={"About": "Run by the Brophy Lab", "Report a Bug": "mailto:jbrophy@stanford.edu", "Get help": None},
-    page_icon=':seedling:',
+    page_title="SeedCounter by the Brophy Lab",
+    menu_items={
+        "About": "Run by the Brophy Lab",
+        "Report a Bug": "mailto:jbrophy@stanford.edu",
+        "Get help": None,
+    },
+    page_icon=":seedling:",
     # layout='wide'
 )
 
@@ -49,70 +54,73 @@ RADIAL_THRESH_RANGE = (6, 25)
 
 BATCH_ID = None
 RUN_PARAMS = {
-    'bf_suffix': None,
-    'fl_suffix': None,
-    'bf_intensity_thresh': None,
-    'fl_intensity_thresh': None,
-    'radial_thresh': None,
-    'mode': 'fluorescence',
-    'marker_color': "#ff0000",  # in RGB mode this is the hex value of the marker color (e.g. "#ff0000" for red)
+    "bf_suffix": None,
+    "fl_suffix": None,
+    "bf_intensity_thresh": None,
+    "fl_intensity_thresh": None,
+    "radial_thresh": None,
+    "mode": "fluorescence",
+    "marker_color": "#ff0000",  # in RGB mode this is the hex value of the marker color (e.g. "#ff0000" for red)
 }
 PREFIX_TO_FILENAMES = None
 
 ##########################           STATE           ##########################
-LOBBY = 'lobby'
-LOADING = 'loading'
-RESULTS = 'results'
+LOBBY = "lobby"
+LOADING = "loading"
+RESULTS = "results"
 STEPS = [LOBBY, LOADING, RESULTS]
-if 'curr_step' not in st.session_state:
+if "curr_step" not in st.session_state:
     st.session_state.curr_step = LOBBY
 
-if 'curr_batch' not in st.session_state:
+if "curr_batch" not in st.session_state:
     st.session_state.curr_batch = None
     # Expect dict with keys: batch_id, batch_output_dir
 
-if 'run_results' not in st.session_state:
+if "run_results" not in st.session_state:
     st.session_state.run_results = {
-        'results': None,
-        'output_dir': None,
+        "results": None,
+        "output_dir": None,
     }
 
-if 'results' not in st.session_state:
+if "results" not in st.session_state:
     st.session_state.results = None
 
-if 'results_csv' not in st.session_state:
+if "results_csv" not in st.session_state:
     st.session_state.results_csv = True
 
-if 'logging' not in st.session_state:
+if "logging" not in st.session_state:
     st.session_state.logging = True
 
-if 'clicked_run' not in st.session_state:
+if "clicked_run" not in st.session_state:
     st.session_state.clicked_run = False
 
-if 'logs_content' not in st.session_state:
+if "logs_content" not in st.session_state:
     st.session_state.logs_content = ""
 
-if 'expanded_params' not in st.session_state:
+if "expanded_params" not in st.session_state:
     st.session_state.expanded_params = False
 
-if 'has_clicked_once' not in st.session_state:
+if "has_clicked_once" not in st.session_state:
     st.session_state.has_clicked_once = False
 
 
 ##########################           LOGIC           ##########################
 
+
 def clear() -> None:
     st.session_state.logs_content = ""
     st.session_state.run_results = {
-        'results': None,
-        'results_csv': None,
-        'results_csv_path': None,
-        'output_dir': None,
+        "results": None,
+        "results_csv": None,
+        "results_csv_path": None,
+        "output_dir": None,
     }
+
 
 def click_reset_button() -> None:
     st.session_state.clicked_run = False
     clear()
+
 
 def click_run_button() -> None:
     success = run_for_batch(RUN_PARAMS, uploaded_files)
@@ -122,38 +130,41 @@ def click_run_button() -> None:
     if success and not st.session_state.has_clicked_once:
         st.session_state.has_clicked_once = True
 
+
 @st.cache_data
-def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]) -> int:
+def run_for_batch(
+    run_params: dict[str, Any], files_uploaded: List[UploadedFile]
+) -> int:
     parsed_filenames = []
     for f in files_uploaded:
         try:
-            if run_params['mode'] == 'fluorescence':
+            if run_params["mode"] == "fluorescence":
                 sample_name, img_type = parse_filename(
-                    f.name, run_params['bf_suffix'], run_params['fl_suffix']
+                    f.name, run_params["bf_suffix"], run_params["fl_suffix"]
                 )
                 parsed_filenames.append(
                     {
-                        'file_name': f.name,
-                        'sample_name': sample_name,
-                        'img_type': img_type,
-                        'file': f,
+                        "file_name": f.name,
+                        "sample_name": sample_name,
+                        "img_type": img_type,
+                        "file": f,
                     }
                 )
             else:
-                sample_name = f.name.split('.')[0]
+                sample_name = f.name.split(".")[0]
                 parsed_filenames.append(
                     {
-                        'file_name': f.name,
-                        'sample_name': sample_name,
-                        'img_type': None,
-                        'file': f,
+                        "file_name": f.name,
+                        "sample_name": sample_name,
+                        "img_type": None,
+                        "file": f,
                     }
                 )
 
         except Exception as e:
             st.error(e)
             return 0
-    
+
     clear()
 
     BATCH_ID = get_batch_id()
@@ -168,7 +179,7 @@ def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]
     for m in run_batch(BATCH_ID, run_params, sample_to_files, output_dir):
         if type(m) == str:
             print(m)
-            st.session_state.logs_content += m + '\n'
+            st.session_state.logs_content += m + "\n"
         else:
             results = m
 
@@ -177,28 +188,33 @@ def run_for_batch(run_params: dict[str, Any], files_uploaded: List[UploadedFile]
     print("Results", results)
 
     st.session_state.run_results = {
-        'results': results,
-        'output_dir': output_dir,
+        "results": results,
+        "output_dir": output_dir,
     }
 
     return 1
 
+
 @st.cache_data
 def get_output_imgs(output_dir: str) -> List[str]:
     return [
-        os.path.join(output_dir, f) for f in os.listdir(output_dir)
-        if os.path.isfile(os.path.join(output_dir, f)) and f.endswith('.png')
+        os.path.join(output_dir, f)
+        for f in os.listdir(output_dir)
+        if os.path.isfile(os.path.join(output_dir, f)) and f.endswith(".png")
     ]
 
+
 @st.cache_data
-def build_prefix_to_output_imgs(output_imgs: List[str]) -> Dict[str, Dict[str, str | None]]:
+def build_prefix_to_output_imgs(
+    output_imgs: List[str],
+) -> Dict[str, Dict[str, str | None]]:
     prefix_to_output_imgs = {}
     for img in output_imgs:
-        prefix = os.path.basename(img).split('_')[0]
+        prefix = os.path.basename(img).split("_")[0]
         if prefix not in prefix_to_output_imgs:
             prefix_to_output_imgs[prefix] = {
                 DEFAULT_BRIGHTFIELD_SUFFIX: None,
-                DEFAULT_FLUORESCENT_SUFFIX: None
+                DEFAULT_FLUORESCENT_SUFFIX: None,
             }
         if DEFAULT_BRIGHTFIELD_SUFFIX in img:
             prefix_to_output_imgs[prefix][DEFAULT_BRIGHTFIELD_SUFFIX] = img
@@ -229,10 +245,12 @@ with st.expander("**Instructions** (click to expand)"):
 
 st.subheader("Upload your images")
 
-mode_option = st.radio("Select counting mode", ["Fluorescence", "Color"], horizontal=True)
-RUN_PARAMS['mode'] = 'fluorescence' if mode_option == 'Fluorescence' else 'color'
+mode_option = st.radio(
+    "Select counting mode", ["Fluorescence", "Color"], horizontal=True
+)
+RUN_PARAMS["mode"] = "fluorescence" if mode_option == "Fluorescence" else "color"
 
-if RUN_PARAMS['mode'] == 'fluorescence':
+if RUN_PARAMS["mode"] == "fluorescence":
     uploader_text = "Upload files with the format <sample_name>_<img_type>.tif"
 else:
     uploader_text = "Upload RGB images. File name is used as sample name"
@@ -256,31 +274,37 @@ with st.expander("**Parameters for manual setup**"):
 
     suff_col1, suff_col2 = st.columns(2)
     with suff_col1:
-        RUN_PARAMS['bf_suffix'] = st.text_input('Brightfield suffix', value=DEFAULT_BRIGHTFIELD_SUFFIX, disabled=RUN_PARAMS['mode']!='fluorescence')
-        RUN_PARAMS['bf_intensity_thresh'] = st.slider(
-            'Brightfield Intensity Threshold',
+        RUN_PARAMS["bf_suffix"] = st.text_input(
+            "Brightfield suffix",
+            value=DEFAULT_BRIGHTFIELD_SUFFIX,
+            disabled=RUN_PARAMS["mode"] != "fluorescence",
+        )
+        RUN_PARAMS["bf_intensity_thresh"] = st.slider(
+            "Brightfield Intensity Threshold",
             0,
             255,
-            INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX]
+            INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX],
         )
-        RUN_PARAMS['radial_thresh'] = st.slider(
-            'Radial Threshold',
-            th_min,
-            th_max,
-            RADIAL_THRESH_DEFAULT
+        RUN_PARAMS["radial_thresh"] = st.slider(
+            "Radial Threshold", th_min, th_max, RADIAL_THRESH_DEFAULT
         )
 
     with suff_col2:
-        RUN_PARAMS['fl_suffix'] = st.text_input('Fluorescent suffix', value=DEFAULT_FLUORESCENT_SUFFIX, disabled=RUN_PARAMS['mode']!='fluorescence')
-        RUN_PARAMS['fl_intensity_thresh'] = st.slider(
-            'Fluorescent Intensity Threshold',
+        RUN_PARAMS["fl_suffix"] = st.text_input(
+            "Fluorescent suffix",
+            value=DEFAULT_FLUORESCENT_SUFFIX,
+            disabled=RUN_PARAMS["mode"] != "fluorescence",
+        )
+        RUN_PARAMS["fl_intensity_thresh"] = st.slider(
+            "Fluorescent Intensity Threshold",
             0,
             255,
-            INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX]
+            INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX],
         )
-        if RUN_PARAMS['mode'] == 'color':
-            RUN_PARAMS['marker_color'] = st.color_picker('Marker color', value=RUN_PARAMS['marker_color'])
-    
+        if RUN_PARAMS["mode"] == "color":
+            RUN_PARAMS["marker_color"] = st.color_picker(
+                "Marker color", value=RUN_PARAMS["marker_color"]
+            )
 
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):
         st.markdown(PARAM_HINTS)
@@ -295,15 +319,16 @@ if st.session_state.clicked_run:
     st.subheader("Results")
 
     with st.expander("__Logs__"):
-        for line in st.session_state.logs_content.split('\n'):
+        for line in st.session_state.logs_content.split("\n"):
             st.write(line)
 
+    if run_results["results"]:
 
-    if run_results['results']:
-
-        results_rounded = get_results_rounded(run_results['results'], 2)
+        results_rounded = get_results_rounded(run_results["results"], 2)
         results_csv = build_results_csv(results_rounded)
-        results_csv_path = store_results(results_csv, run_results['output_dir'], BATCH_ID)
+        results_csv_path = store_results(
+            results_csv, run_results["output_dir"], BATCH_ID
+        )
 
         print(f"results_csv: {results_csv}")
 
@@ -315,18 +340,18 @@ if st.session_state.clicked_run:
 
         st.download_button(
             label="Download results as CSV",
-            data=open(results_csv_path, 'rb'),
-            file_name=f'seed_counter_{BATCH_ID}.csv',
-            mime='text/csv',
+            data=open(results_csv_path, "rb"),
+            file_name=f"seed_counter_{BATCH_ID}.csv",
+            mime="text/csv",
         )
 
         st.subheader("Output Images with Seeds Highlighted")
 
         # results list to dict
-        results_dict: Dict[str, Result] = results_list_to_dict(run_results['results'])
+        results_dict: Dict[str, Result] = results_list_to_dict(run_results["results"])
 
         # get all png files from output_dir
-        output_imgs = get_output_imgs(run_results['output_dir'])
+        output_imgs = get_output_imgs(run_results["output_dir"])
         # group images by prefix
         prefix_to_output_imgs = build_prefix_to_output_imgs(output_imgs)
 
@@ -336,19 +361,22 @@ if st.session_state.clicked_run:
         with col1:
             prefix = st.radio(
                 "Select a sample to display the results",
-                list(prefix_to_output_imgs.keys())
+                list(prefix_to_output_imgs.keys()),
             )
 
         with col2:
             readable_type_map = {
                 DEFAULT_BRIGHTFIELD_SUFFIX: "Brightfield",
-                DEFAULT_FLUORESCENT_SUFFIX: "Fluorescent"
+                DEFAULT_FLUORESCENT_SUFFIX: "Fluorescent",
             }
             suffix_to_key = {
                 DEFAULT_BRIGHTFIELD_SUFFIX: "total_seeds",
-                DEFAULT_FLUORESCENT_SUFFIX: "fl_seeds"
+                DEFAULT_FLUORESCENT_SUFFIX: "fl_seeds",
             }
-            for img_type in [DEFAULT_BRIGHTFIELD_SUFFIX, DEFAULT_FLUORESCENT_SUFFIX]: # one for brightfield, one for fluorescent
+            for img_type in [
+                DEFAULT_BRIGHTFIELD_SUFFIX,
+                DEFAULT_FLUORESCENT_SUFFIX,
+            ]:  # one for brightfield, one for fluorescent
                 image_path = prefix_to_output_imgs[prefix][img_type]
                 if image_path:
                     image = Image.open(image_path)
@@ -359,14 +387,22 @@ if st.session_state.clicked_run:
 
                 old_value = suffix_to_key[img_type]
 
-                new_value = st.number_input(f"Manually override {suffix_to_key[img_type]} value:", value=value, placeholder="Type a number", step=1, key=image_path)
+                new_value = st.number_input(
+                    f"Manually override {suffix_to_key[img_type]} value:",
+                    value=value,
+                    placeholder="Type a number",
+                    step=1,
+                    key=image_path,
+                )
 
                 if new_value != value:
-                    print(f"Updated value for {prefix} - {suffix_to_key[img_type]}: {new_value}")
+                    print(
+                        f"Updated value for {prefix} - {suffix_to_key[img_type]}: {new_value}"
+                    )
                     results_dict[prefix].__setattr__(suffix_to_key[img_type], new_value)
                     new_results = dict_to_results_list(results_dict)
                     st.session_state.run_results = {
-                        'results': new_results,
-                        'output_dir': run_results['output_dir'],
+                        "results": new_results,
+                        "output_dir": run_results["output_dir"],
                     }
                     st.rerun()
