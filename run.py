@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import cv2
 import os
-from enum import StrEnum
 
 from config import (
     DEFAULT_BRIGHTFIELD_SUFFIX,

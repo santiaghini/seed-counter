@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import os
-from enum import StrEnum
+from enum import Enum
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ from config import TARGET_RATIO
 VALID_EXTENSIONS: list[str] = [".tif", ".tiff", ".png", ".jpg", ".jpeg"]
 
 
-class CountMethod(StrEnum):
+class CountMethod(Enum):
     """Enumeration of counting methods."""
 
     FLUORESCENCE = "fluorescence"

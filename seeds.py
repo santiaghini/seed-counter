@@ -14,45 +14,35 @@ from utils import plot_all
 def mask_red_marker(
     image: np.ndarray,
 ) -> np.ndarray:
+    # Use LAB color space to separate the red marker
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
     L, a, b = cv2.split(lab)
 
+    # Threshold the L channel to get all the seeds
     thr_L, seeds_mask = cv2.threshold(
         L, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
     )
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     seeds_mask = cv2.morphologyEx(seeds_mask, cv2.MORPH_OPEN, kernel, 1)
 
-    # ────────────────────────────────────────────────────────────────
-    # 2.  NON-marker seeds  = yellow / tan  → high b*
-    #     • analyse b* *only* inside the seed mask
-    #     • let Otsu find the valley between “tan” and “not-tan”
-    # ────────────────────────────────────────────────────────────────
+    # threshold to obtain the non-marker seeds
     thr_marker, non_marker = cv2.threshold(
         b, 50, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
     )
-    # At this point:  white = high-b* seeds  (yellows/tans)
-    #                 black = lower-b* seeds  (reds / purples / anything else)
 
     non_marker = cv2.bitwise_and(non_marker, seeds_mask)  # remove stray BG hits
 
-    # ────────────────────────────────────────────────────────────────
-    # 3.  MARKER-positive seeds  = all_seeds ⊖ non_marker
-    # ────────────────────────────────────────────────────────────────
+    # xor operation to get the marker seeds (red)
     marker = cv2.bitwise_xor(seeds_mask, non_marker)
 
-    # optional clean-up (little specks, gaps)
+    # clean-up (little specks, gaps)
     marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel, 1)
 
-    # ---------------------------------------------------------------
-    #  A. distance-transform: keep only pixels ≥ 2 px from any hole
-    # ---------------------------------------------------------------
+    # distance-transform: keep only pixels ≥ 2 px from any hole
     dist = cv2.distanceTransform(marker, cv2.DIST_L2, 5)
-    core = (dist > 2).astype(np.uint8) * 255  # adjust 2 → 3 if rims persist
+    core = (dist > 3).astype(np.uint8) * 255
 
-    # ---------------------------------------------------------------
-    # optional: restore original seed size if you shrank it too much
-    # ---------------------------------------------------------------
+    # restore original seed size
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     core = cv2.dilate(core, kernel, iterations=1)  # puts back ~1 px
 
@@ -104,23 +94,6 @@ def dt_threshold_from_median(
     # Return a threshold as a fraction of the median radius
     dt_thresh = median_radius * frac
     return dt_thresh
-
-
-# def dt_threshold_from_reference(dist_transform, ref_radius_px: int = 10, ref_dt_thresh: int = 10):
-#     from scipy import ndimage
-
-#     # --- estimate current seed radius ---------------------------
-#     #     • find local maxima of dt  (centre of each seed)
-#     peaks = (dist_transform == ndimage.maximum_filter(dist_transform, size=7)) & (dist_transform > 0)
-#     peak_vals = dist_transform[peaks]                       # one value ≈ radius for each seed
-#     curr_radius_px = np.median(peak_vals)       # robust against odd seeds
-
-#     # --- scale the reference threshold --------------------------
-#     scale      = curr_radius_px / ref_radius_px
-#     dt_thresh  = ref_dt_thresh * scale
-#     print(f"median seed radius = {curr_radius_px:.2f}px  |  "
-#           f"scale = {scale:.2f}  |  DT threshold = {dt_thresh:.2f}")
-#     return dt_thresh
 
 
 def process_seed_image(
