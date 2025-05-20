@@ -111,6 +111,24 @@ def process_seed_image(
     """
     Process a seed image to count the number of seeds.
     Applies normalization, thresholding, area filtering, and segmentation.
+
+    Parameters:
+        image (np.ndarray): The input image (BGR or grayscale).
+        img_type (str): The type of image, e.g., 'bf' (brightfield) or 'fl' (fluorescent).
+        sample_name (str): The sample name, used for output file naming.
+        initial_brightness_thresh (int | None): If provided, use this fixed threshold for binarization;
+            if None, use automatic thresholding (Triangle method).
+        radial_threshold (float | None): If provided, use this value for distance transform thresholding;
+            if None, compute automatically.
+        image_L (np.ndarray | None): Optional precomputed L (lightness) channel; if None, extract from image.
+        output_dir (str | None): If provided, save output images to this directory.
+        plot (bool): If True, display intermediate and final processing steps as plots.
+        remove_scale_bar (bool): If True, mask out the lower left region (assumed to be a scale bar).
+        radial_threshold_ratio (float | None): Fraction of the median distance transform value to use for
+            thresholding; if None, use default (0.4).
+
+    Returns:
+        int: The number of seeds detected in the image.
     """
 
     if radial_threshold_ratio is None:
@@ -126,23 +144,23 @@ def process_seed_image(
     # --- Extract L channel (lightness) ---
     if image_L is None and len(image.shape) == 3 and image.shape[2] == 3:
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        L, a, b = cv2.split(lab)
+        L_channel, a, b = cv2.split(lab)
     else:
-        L = image_L
+        L_channel = image_L
 
     # --- Normalize so seeds are always bright ---
-    L_norm = normalize_seeds_bright(L)
+    L_norm = normalize_seeds_bright(L_channel)
 
     if remove_scale_bar:
         L_norm[-50:, :500] = 0
 
     if plot:
-        plots.append((L_norm, "Grayscale image", "gray"))
+        plots.append((L_norm, "Luminosity image", "jet"))
 
     # --- Threshold to isolate bright regions (seeds) ---
     if not initial_brightness_thresh:
         threshold_value, thresholded_img = cv2.threshold(
-            L, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_TRIANGLE
+            L_norm, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_TRIANGLE
         )
     else:
         threshold_value, thresholded_img = cv2.threshold(
@@ -152,7 +170,8 @@ def process_seed_image(
     print(f"Intensity threshold value: {threshold_value}")
 
     if plot:
-        plots.append((thresholded_img, "Thresholded image", None))
+        thresholded_img_copy = np.copy(thresholded_img)
+        plots.append((thresholded_img_copy, "Thresholded image", None))
 
     # --- Initial connected components: segment all regions ---
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
@@ -167,6 +186,13 @@ def process_seed_image(
     idxs_small_area = np.where(areas < area_95th * SMALL_AREA_FACTOR)[0] + 1
     mask_small = np.isin(labels, idxs_small_area)
     thresholded_img[mask_small] = 0
+
+    # Fallback: filter everything less than 1/1000th of the total image area
+    total_area = image.shape[0] * image.shape[1]
+    min_area = total_area / 100_000
+    idxs_tiny_area = np.where(areas < min_area)[0] + 1
+    mask_tiny = np.isin(labels, idxs_tiny_area)
+    thresholded_img[mask_tiny] = 0
 
     # --- Re-segment after removing small areas ---
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
