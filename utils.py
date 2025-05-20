@@ -73,86 +73,69 @@ def plot_all(plots: list[tuple[np.ndarray, str, str | None]]) -> None:
 @dataclass
 class Result:
     prefix: str
-    fl_seeds: int | None = None
-    non_fl_seeds: int | None = None
-    total_seeds: int | None = None
-    ratio_fl_total: float | None = None
-    chisquare: float | None = None
-    pvalue: float | None = None
+    _fl_seeds: int | None = None
+    _non_fl_seeds: int | None = None
+    _total_seeds: int | None = None
+    _ratio_fl_total: float | None = None
+    _chisquare: float | None = None
+    _pvalue: float | None = None
     target_ratio: float = TARGET_RATIO
 
     def __repr__(self) -> str:
-        return f"Result(prefix={self.prefix}, fl_seeds={self.fl_seeds}, non_fl_seeds={self.non_fl_seeds}, total_seeds={self.total_seeds}, ratio_fl_total={self.ratio_fl_total}, chisquare={self.chisquare}, pvalue={self.pvalue})"
+        return f"Result(prefix={self.prefix}, fl_seeds={self.fl_seeds}, non_fl_seeds={self._non_fl_seeds}, total_seeds={self.total_seeds}, ratio_fl_total={self._ratio_fl_total}, chisquare={self._chisquare}, pvalue={self._pvalue})"
 
     def to_dict(self) -> dict[str, float | int | str | None]:
         return {
             "prefix": self.prefix,
             "fl_seeds": self.fl_seeds,
-            "non_fl_seeds": self.non_fl_seeds,
+            "non_fl_seeds": self._non_fl_seeds,
             "total_seeds": self.total_seeds,
-            "ratio_fl_total": self.ratio_fl_total,
-            "chisquare": self.chisquare,
-            "pvalue": self.pvalue,
+            "ratio_fl_total": self._ratio_fl_total,
+            "chisquare": self._chisquare,
+            "pvalue": self._pvalue,
         }
 
     @property
     def fl_seeds(self) -> int | None:
-        return self.fl_seeds
+        return self._fl_seeds
 
     @fl_seeds.setter
     def fl_seeds(self, value: int | None) -> None:
-        self.fl_seeds = value
+        self._fl_seeds = value
         self.update_values()
 
     @property
     def total_seeds(self) -> int | None:
-        return self.total_seeds
+        return self._total_seeds
 
     @total_seeds.setter
     def total_seeds(self, value: int | None) -> None:
-        self.total_seeds = value
+        self._total_seeds = value
         self.update_values()
 
-    @property
-    def non_fl_seeds(self) -> int | None:
-        return self.non_fl_seeds
-
-    @property
-    def ratio_fl_total(self) -> float | None:
-        return self.ratio_fl_total
-
-    @property
-    def chisquare(self) -> float | None:
-        return self.chisquare
-
-    @property
-    def pvalue(self) -> float | None:
-        return self.pvalue
-
     def update_values(self) -> None:
-        if self.total_seeds != None and self.fl_seeds != None:
-            self.non_fl_seeds = self.total_seeds - self.fl_seeds
-            self.ratio_fl_total = self.fl_seeds / self.total_seeds
-            self.chisquare, self.pvalue = compute_chi2(self, self.target_ratio)
-
+        if self._total_seeds is not None and self._fl_seeds is not None:
+            self._non_fl_seeds = self._total_seeds - self._fl_seeds
+            self._ratio_fl_total = self._fl_seeds / self._total_seeds
+            self._chisquare, self._pvalue = compute_chi2(self, self.target_ratio)
         else:
-            self.non_fl_seeds = None
-            self.ratio_fl_total = None
-            self.chisquare = None
-            self.pvalue = None
+            self._non_fl_seeds = None
+            self._ratio_fl_total = None
+            self._chisquare = None
+            self._pvalue = None
 
     def round_all(self, decimals: int = 2) -> None:
-        self.fl_seeds = round_if_not_none(self.fl_seeds)
-        self.non_fl_seeds = round_if_not_none(self.non_fl_seeds)
-        self.total_seeds = round_if_not_none(self.total_seeds)
-        self.ratio_fl_total = round_if_not_none(self.ratio_fl_total, decimals)
-        self.chisquare = round_if_not_none(self.chisquare, 4)
-        self.pvalue = round_if_not_none(self.pvalue, 4)
+        self._fl_seeds = round_if_not_none(self._fl_seeds)
+        self._non_fl_seeds = round_if_not_none(self._non_fl_seeds)
+        self._total_seeds = round_if_not_none(self._total_seeds)
+        self._ratio_fl_total = round_if_not_none(self._ratio_fl_total, decimals)
+        self._chisquare = round_if_not_none(self._chisquare, 4)
+        self._pvalue = round_if_not_none(self._pvalue, 4)
 
 
 def compute_chi2(result: Result, expected_ratio: float) -> tuple[float, float]:
-    observed = np.array([result.fl_seeds, result.non_fl_seeds])
-    total = result.total_seeds
+    observed = np.array([result._fl_seeds, result._non_fl_seeds])
+    total = result._total_seeds
     expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
     chi2_result = chisquare(f_obs=observed, f_exp=expected)
     chi2, p = chi2_result
@@ -173,12 +156,12 @@ def build_results_csv(results: list[Result]) -> list[list[str | float | int | No
     for result in results:
         row = [
             result.prefix,
-            result.fl_seeds,
-            result.non_fl_seeds,
-            result.total_seeds,
-            result.ratio_fl_total,
-            result.chisquare,
-            result.pvalue,
+            result._fl_seeds,
+            result._non_fl_seeds,
+            result._total_seeds,
+            result._ratio_fl_total,
+            result._chisquare,
+            result._pvalue,
         ]
         rows.append(row)
     return rows
