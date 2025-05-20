@@ -2,21 +2,13 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-import matplotlib
-matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
 
 from config import (
-    INITIAL_BRIGHTNESS_THRESHOLDS,
-    SMALL_AREA_PRE_PASS,
     DEFAULT_BRIGHTFIELD_SUFFIX,
     DEFAULT_FLUORESCENT_SUFFIX,
 )
 from utils import plot_all, plot_full
-
-
-REF_RADIAL_THRESH = 8
-REF_MEDIAN_AREA = 1250
 
 
 def mask_red_marker(
@@ -138,7 +130,6 @@ def process_seed_image(
     radial_threshold_ratio = 0.4,
     radial_threshold_mode: str = "auto_infer",
 ) -> int:
-    """Process ``image`` and return the number of detected seeds."""
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
 
