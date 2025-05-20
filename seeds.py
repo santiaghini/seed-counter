@@ -80,25 +80,23 @@ def normalize_seeds_bright(image):
 
 
 def dt_threshold_from_median(
-        num_areas,
-        area_labels,
-        areas_stats,
-        median_area,
-        median_mask,
-        seed_mask,
-        dist_transform,
-        frac=0.40,
-        area_tol=0.25
-    ):
+    num_areas,
+    area_labels,
+    areas_stats,
+    median_area,
+    median_mask,
+    seed_mask,
+    dist_transform,
+    frac=0.40,
+    area_tol=0.25
+):
     lo, hi   = median_area * (1 - area_tol), median_area * (1 + area_tol)
 
-    # 3. build mask of seeds whose area ≈ median
     median_mask = np.zeros_like(seed_mask, np.uint8)
     for cid in range(1, num_areas):
         if lo <= areas_stats[cid, cv2.CC_STAT_AREA] <= hi:
             median_mask[area_labels == cid] = 255
 
-    # 4. “median radius” = max DT value among those seeds
     median_radius = dist_transform[median_mask > 0].max()
     dt_thresh     = median_radius * frac
     return dt_thresh
@@ -131,8 +129,11 @@ def process_seed_image(
     output_dir: str | None = None,
     plot: bool = False,
     remove_scale_bar: bool = True,
-    radial_threshold_ratio = 0.4,
+    radial_threshold_ratio: float | None = None,
 ) -> int:
+    
+    if radial_threshold_ratio is None:
+        radial_threshold_ratio = 0.4
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
 
@@ -369,14 +370,14 @@ def process_color_image(
     bf_thresh: int | None = None,
     fl_thresh: int | None = None,
     radial_threshold: float | None = None,
-    radial_threshold_ratio: float = 0.4,
+    radial_threshold_ratio: float | None = None,
     output_dir: str | None = None,
     plot: bool = False,
 ) -> tuple[int, int]:
     """Process a single RGB image for total and colored seeds."""
-    original = cv2.imread(image_path)
+    original_image = cv2.imread(image_path)
     total = process_seed_image(
-        image=original,
+        image=original_image,
         img_type=DEFAULT_BRIGHTFIELD_SUFFIX,
         sample_name=sample_name,
         initial_brightness_thresh=bf_thresh,
@@ -387,9 +388,9 @@ def process_color_image(
         image_L=None,
     )
 
-    red_masked = mask_red_marker(original)
+    red_masked = mask_red_marker(original_image)
     colored = process_seed_image(
-        image=original,
+        image=original_image,
         image_L=red_masked,
         img_type=DEFAULT_FLUORESCENT_SUFFIX,
         sample_name=sample_name,

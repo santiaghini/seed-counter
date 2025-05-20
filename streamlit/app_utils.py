@@ -12,7 +12,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from utils import Result
-from run import process_batch, process_color_batch
+from run import process_fluorescent_batch, process_color_batch
 
 BATCHES_DIR = 'batches'
 INPUT_DIR = 'input'
@@ -99,7 +99,7 @@ def run_batch(
     yield f'Running batch {batch_id} with params: {run_params}'
     results = None
     if mode == 'fluorescence':
-        iterator = process_batch(
+        iterator = process_fluorescent_batch(
             sample_to_files,
             bf_thresh,
             fl_thresh,
