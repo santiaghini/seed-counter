@@ -9,8 +9,6 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 import pandas as pd
 from PIL import Image
 
-from utils import CountMethod
-
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -32,6 +30,7 @@ from config import (
 )
 from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 from utils import (
+    CountMethod,
     Result,
     build_results_csv,
     store_results,
@@ -244,6 +243,8 @@ def build_prefix_to_output_imgs(
         else:
             prefix_to_output_imgs[prefix][DEFAULT_FLUORESCENT_SUFFIX] = img
 
+    print(f"prefix_to_output_imgs: {prefix_to_output_imgs}")
+
     return prefix_to_output_imgs
 
 
@@ -297,6 +298,18 @@ uploaded_files = st.file_uploader(
 st.markdown(":gray[*Pro Tip: To clear all uploaded files, reload the page.*]")
 
 ### Parameter box
+
+intensity_naming = {
+    CountMethod.FLUORESCENCE: {
+        "bf": "Brightfield Intensity Threshold",
+        "fl": "Fluorescence Intensity Threshold",
+    },
+    CountMethod.COLORIMETRIC: {
+        "bf": "All Seeds Intensity Threshold",
+        "fl": "Marker Intensity Threshold",
+    },
+}
+
 with st.expander("**Parameters for manual setup**"):
     st.subheader("Parameters")
 
@@ -324,12 +337,12 @@ with st.expander("**Parameters for manual setup**"):
                 RUN_PARAMS.bf_suffix = None
 
         enable_bf_thresh = st.checkbox(
-            "Manually set Brightfield Intensity Threshold",
+            f"Manually set {intensity_naming[RUN_PARAMS.mode]['bf']}",
             value=False,
-            help="Override automatic thresholding for the brightfield image",
+            help="Check to override the automatic thresholding",
         )
         RUN_PARAMS.bf_intensity_thresh = st.slider(
-            "Brightfield Intensity Threshold",
+            intensity_naming[RUN_PARAMS.mode]["bf"],
             0,
             255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_BRIGHTFIELD_SUFFIX],
@@ -342,7 +355,7 @@ with st.expander("**Parameters for manual setup**"):
         enable_radial_thresh = st.checkbox(
             "Manually set Radial Threshold Ratio",
             value=False,
-            help="Control how seeds touching each other are split",
+            help=f"Check to override the default value of {RADIAL_THRESH_DEFAULT}",
         )
         RUN_PARAMS.radial_threshold_ratio = st.slider(
             "Radial Threshold Ratio",
@@ -351,7 +364,7 @@ with st.expander("**Parameters for manual setup**"):
             float(RADIAL_THRESH_DEFAULT),
             step=0.01,
             disabled=not enable_radial_thresh,
-            help="Fraction of median seed radius used for separation",
+            help="Fraction of the median seed radius which is removed for splitting seeds",
         )
         if not enable_radial_thresh:
             RUN_PARAMS.radial_threshold_ratio = None
@@ -377,12 +390,12 @@ with st.expander("**Parameters for manual setup**"):
                 RUN_PARAMS.fl_suffix = None
 
         enable_fl_thresh = st.checkbox(
-            "Manually set Fluorescent Intensity Threshold",
+            f"Manually set {intensity_naming[RUN_PARAMS.mode]['fl']}",
             value=False,
-            help="Override automatic thresholding for the fluorescent image",
+            help="Check to override automatic thresholding for the fluorescent image",
         )
         RUN_PARAMS.fl_intensity_thresh = st.slider(
-            "Fluorescent Intensity Threshold",
+            intensity_naming[RUN_PARAMS.mode]["fl"],
             0,
             255,
             INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX],
