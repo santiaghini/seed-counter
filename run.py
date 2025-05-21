@@ -262,8 +262,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--large_area_factor",
         type=float,
-        default=20.0,
-        help="Factor to determine the maximum allowed area for a seed (relative to median area). Used to filter out very large objects. Default is 20.",
+        default=None,
+        help="Factor to determine the maximum allowed area for a seed (relative to median area). Used to filter out very large objects. Default is None, meaning that the operation won't be performed.",
     )
 
     args = parser.parse_args()
