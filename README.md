@@ -55,12 +55,12 @@ python run.py --dir ./images --output ./output_directory --mode fluorescence --i
 - `-o, --output`: output directory to store results (required).
 - `-n, --nostore`: flag, if present, does not store the processed images with contours for counting, only the final results in .csv format. Default is `False`.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
-- `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`.
+- `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`. Range is from 0 to 255.
 - `-r, --radial_thresh`: radial distance threshold for seed separation. Usually ranges from `8.0` to `16.0`. If omitted, this value is computed automatically.
-- `--radial_threshold_ratio`: ratio of the median seed radius used when computing the radial threshold automatically. Default is `0.4`.
-- `--large_area_factor`: factor to filter out objects larger than this multiple of the median seed area. Default is `20`.
+- `--radial_threshold_ratio`: percent of the mean seed radius to use for setting the threshold for the watershed algorithm. Default is `0.4`, which means that the recognized seed areas are reduced by 40% to separate touching seeds.  
+- `--large_area_factor`: factor to filter out objects larger than this multiple of the median seed area. Range is 0 to 100. This is usually unnecessary for clean images.
 - `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images.
-- `--mode`: either `fluorescence` (default) or `color`.
+- `--mode`: either `fluorescence` (default) or `colorimetric`.
 
 You can get details of all arguments by running:
 ```bash
