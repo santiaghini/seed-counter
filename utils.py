@@ -191,7 +191,7 @@ def store_results(
 
     bf_thresh = results[0].bf_thresh
     marker_thresh = results[0].marker_thresh
-    radial_ratio = results[0].radial_ratio
+    radial_ratio = results[0].radial_threshold_ratio
 
     # save file with current timestamp
     if not batch_id:
