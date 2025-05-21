@@ -128,7 +128,7 @@ def process_seed_image(
         radial_threshold_ratio (float | None): Fraction of the median distance transform value to use for
             thresholding; if None, use default (0.4).
         large_area_factor (float): Factor to determine the maximum allowed area for a seed (relative to median area).
-            Used to filter out very large objects. Default is 20.
+            Used to filter out very large objects. Default is None, which means that the operation will not be performed.
 
     Returns:
         int: The number of seeds detected in the image.
@@ -151,8 +151,6 @@ def process_seed_image(
 
     if radial_threshold_ratio is None:
         radial_threshold_ratio = 0.4
-    if large_area_factor is None:
-        large_area_factor = 20
 
     plots: list[tuple[np.ndarray, str, str | None]] = []
 
@@ -222,26 +220,26 @@ def process_seed_image(
     areas = stats[1:, cv2.CC_STAT_AREA]
 
     # --- Filter out very large areas ---
-    # Remove regions that are much larger than typical seeds (likely merged seeds or artifacts).
-    median_area = np.median(areas)
-    LARGE_AREA_FACTOR = large_area_factor
+    if large_area_factor is not None:
+        # Remove regions that are much larger than typical seeds (likely merged seeds or artifacts).
+        median_area = np.median(areas)
 
-    if median_area == 0:
-        raise RuntimeError("No valid seed area found")
+        if median_area == 0:
+            raise RuntimeError("No valid seed area found")
 
-    too_big = np.where(areas > LARGE_AREA_FACTOR * median_area)[0]
-    if too_big.size > 5:
-        top5 = too_big[np.argsort(areas[too_big])[-5:]]
-        too_big = top5
+        too_big = np.where(areas > large_area_factor * median_area)[0]
+        if too_big.size > 5:
+            top5 = too_big[np.argsort(areas[too_big])[-5:]]
+            too_big = top5
 
-    for lbl in too_big + 1:  # +1 for label offset
-        thresholded_img[labels == lbl] = 0
+        for lbl in too_big + 1:  # +1 for label offset
+            thresholded_img[labels == lbl] = 0
 
-    # --- Re-segment after removing large areas ---
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-        thresholded_img, connectivity=8
-    )
-    areas = stats[1:, cv2.CC_STAT_AREA]
+        # --- Re-segment after removing large areas ---
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+            thresholded_img, connectivity=8
+        )
+        areas = stats[1:, cv2.CC_STAT_AREA]
 
     if plot:
         plots.append(

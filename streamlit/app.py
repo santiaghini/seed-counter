@@ -374,23 +374,6 @@ with st.expander("**Parameters for manual setup**"):
         if not enable_fl_thresh:
             RUN_PARAMS["fl_intensity_thresh"] = None
 
-        enable_large_area_factor = st.checkbox(
-            "Enable Large Area Factor",
-            value=False,
-            help="Filter out objects much larger than a typical seed",
-        )
-        RUN_PARAMS["large_area_factor"] = st.slider(
-            "Large Area Factor (for removal)",
-            1.0,
-            100.0,
-            float(LARGE_AREA_FACTOR_DEFAULT),
-            step=1.0,
-            disabled=not enable_large_area_factor,
-            help="Objects bigger than this multiple of the median area are ignored",
-        )
-        if not enable_large_area_factor:
-            RUN_PARAMS["large_area_factor"] = None
-
     st.divider()
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):
         st.markdown(PARAM_HINTS)
