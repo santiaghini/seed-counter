@@ -1,22 +1,33 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
 import sys
+from datetime import datetime
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List
-from PIL import ImageColor
 
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-from utils import Result
 from run import process_fluorescent_batch, process_colorimetric_batch
+from utils import CountMethod, Result
 
 BATCHES_DIR = "batches"
 INPUT_DIR = "input"
 OUTPUT_DIR = "output"
+
+
+@dataclass
+class AppRunParams:
+    mode: CountMethod
+    bf_suffix: str | None
+    fl_suffix: str | None
+    bf_intensity_thresh: int | None
+    fl_intensity_thresh: int | None
+    radial_threshold_ratio: float | None
+    large_area_factor: float | None
 
 
 def get_batch_id() -> str:
@@ -86,24 +97,24 @@ def load_files(
 
 def run_batch(
     batch_id: str,
-    run_params: Dict[str, Any],
+    run_params: AppRunParams,
     sample_to_files: Dict[str, List[str]],
     output_dir: str,
 ) -> Iterable[str | List[Result]]:
-    bf_suffix = run_params["bf_suffix"]
-    fl_suffix = run_params["fl_suffix"]
-    bf_thresh = run_params["bf_intensity_thresh"]
-    fl_thresh = run_params["fl_intensity_thresh"]
-    radial_threshold_ratio = run_params["radial_threshold_ratio"]
-    large_area_factor = run_params["large_area_factor"]
+    bf_suffix = run_params.bf_suffix
+    fl_suffix = run_params.fl_suffix
+    bf_thresh = run_params.bf_intensity_thresh
+    fl_thresh = run_params.fl_intensity_thresh
+    radial_threshold_ratio = run_params.radial_threshold_ratio
+    large_area_factor = run_params.large_area_factor
 
-    print(run_params)
+    print(f"{run_params=}")
 
-    mode = run_params.get("mode", "fluorescence")
+    mode = run_params.get("mode", CountMethod.FLUORESCENCE)
 
     yield f"Running batch {batch_id} with params: {run_params}"
     results = None
-    if mode == "fluorescence":
+    if mode == CountMethod.FLUORESCENCE:
         iterator = process_fluorescent_batch(
             sample_to_files=sample_to_files,
             bf_thresh=bf_thresh,

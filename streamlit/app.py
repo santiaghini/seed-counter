@@ -11,13 +11,13 @@ from PIL import Image
 
 from utils import CountMethod
 
-
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from app_utils import (
+    AppRunParams,
     create_folders,
     dict_to_results_list,
     get_batch_id,
@@ -50,21 +50,22 @@ st.set_page_config(
     # layout='wide'
 )
 
+
 ##########################           GLOBALS           ##########################
 RADIAL_THRESH_DEFAULT = 0.4
 RADIAL_THRESH_RATIO = (0, 1)
 LARGE_AREA_FACTOR_DEFAULT = 20.0
 
 BATCH_ID = None
-RUN_PARAMS = {
-    "bf_suffix": None,
-    "fl_suffix": None,
-    "bf_intensity_thresh": None,
-    "fl_intensity_thresh": None,
-    "radial_threshold_ratio": None,
-    "large_area_factor": None,
-    "mode": "fluorescence",
-}
+RUN_PARAMS = AppRunParams(
+    mode=CountMethod.FLUORESCENCE,
+    bf_suffix=None,
+    fl_suffix=None,
+    bf_intensity_thresh=None,
+    fl_intensity_thresh=None,
+    radial_threshold_ratio=None,
+    large_area_factor=None,
+)
 PREFIX_TO_FILENAMES = None
 
 ##########################           STATE           ##########################
@@ -135,15 +136,13 @@ def click_run_button() -> None:
 
 
 @st.cache_data
-def run_for_batch(
-    run_params: dict[str, Any], files_uploaded: List[UploadedFile]
-) -> int:
+def run_for_batch(run_params: AppRunParams, files_uploaded: List[UploadedFile]) -> int:
     parsed_filenames = []
     for f in files_uploaded:
         try:
-            if run_params["mode"] == "fluorescence":
+            if run_params.mode == CountMethod.FLUORESCENCE:
                 sample_name, img_type = parse_filename(
-                    f.name, run_params["bf_suffix"], run_params["fl_suffix"]
+                    f.name, run_params.bf_suffix, run_params.fl_suffix
                 )
                 parsed_filenames.append(
                     {
@@ -179,7 +178,12 @@ def run_for_batch(
     print(f"sample_to_filenames: {sample_to_files}")
 
     print("running batch...")
-    for m in run_batch(BATCH_ID, run_params, sample_to_files, output_dir):
+    for m in run_batch(
+        batch_id=BATCH_ID,
+        run_params=run_params,
+        sample_to_files=sample_to_files,
+        output_dir=output_dir,
+    ):
         if type(m) == str:
             print(m)
             st.session_state.logs_content += m + "\n"
@@ -210,11 +214,11 @@ def get_output_imgs(output_dir: str) -> List[str]:
 @st.cache_data
 def build_prefix_to_output_imgs(
     output_imgs: List[str],
-    mode: str,
+    mode: CountMethod,
 ) -> Dict[str, Dict[str, str | None]]:
     prefix_to_output_imgs = {}
     for img in output_imgs:
-        if mode == "fluorescence":
+        if mode == CountMethod.FLUORESCENCE:
             prefix = os.path.basename(img).split("_")[0]
         else:
             prefix = None
@@ -270,9 +274,13 @@ mode_option = st.radio(
     horizontal=True,
     help="Fluorescence: paired fluorescent/brightfield images. Colorimetric: single RGB images",
 )
-RUN_PARAMS["mode"] = CountMethod.FLUORESCENCE.value if mode_option == "Fluorescence" else CountMethod.COLORIMETRIC.value
+RUN_PARAMS.mode = (
+    CountMethod.FLUORESCENCE
+    if mode_option == "Fluorescence"
+    else CountMethod.COLORIMETRIC
+)
 
-if RUN_PARAMS["mode"] == "fluorescence":
+if RUN_PARAMS.mode == CountMethod.FLUORESCENCE:
     uploader_text = "Upload files with the format <sample_name>_<img_type>.tif"
 else:
     uploader_text = "Upload RGB images. File name is used as sample name"
@@ -296,28 +304,31 @@ with st.expander("**Parameters for manual setup**"):
 
     suff_col1, suff_col2 = st.columns(2)
     with suff_col1:
-        if RUN_PARAMS["mode"] 
-        enable_bf_suffix = st.checkbox(
-            "Enable Brightfield suffix",
-            value=True,
-            disabled=RUN_PARAMS["mode"] == CountMethod.COLORIMETRIC.value,
-            help="Check to override the default brightfield filename suffix",
-        )
-        RUN_PARAMS["bf_suffix"] = st.text_input(
-            "Brightfield suffix",
-            value=DEFAULT_BRIGHTFIELD_SUFFIX,
-            disabled=(not enable_bf_suffix or RUN_PARAMS["mode"] != "fluorescence"),
-            help="Suffix that identifies brightfield images (e.g. 'BF')",
-        )
-        if not enable_bf_suffix:
-            RUN_PARAMS["bf_suffix"] = None
+        RUN_PARAMS.bf_suffix = None
+        if RUN_PARAMS.mode == CountMethod.FLUORESCENCE:
+            enable_bf_suffix = st.checkbox(
+                "Manually set Brightfield suffix",
+                value=True,
+                disabled=RUN_PARAMS.mode == CountMethod.COLORIMETRIC,
+                help="Check to override the default brightfield filename suffix",
+            )
+            RUN_PARAMS.bf_suffix = st.text_input(
+                "Brightfield suffix",
+                value=DEFAULT_BRIGHTFIELD_SUFFIX,
+                disabled=(
+                    not enable_bf_suffix or RUN_PARAMS.mode != CountMethod.FLUORESCENCE
+                ),
+                help="Suffix that identifies brightfield images (e.g. 'BF')",
+            )
+            if not enable_bf_suffix:
+                RUN_PARAMS.bf_suffix = None
 
         enable_bf_thresh = st.checkbox(
-            "Enable Brightfield Intensity Threshold",
+            "Manually set Brightfield Intensity Threshold",
             value=False,
             help="Override automatic thresholding for the brightfield image",
         )
-        RUN_PARAMS["bf_intensity_thresh"] = st.slider(
+        RUN_PARAMS.bf_intensity_thresh = st.slider(
             "Brightfield Intensity Threshold",
             0,
             255,
@@ -326,14 +337,14 @@ with st.expander("**Parameters for manual setup**"):
             help="Lower to capture dim seeds, raise to reduce background",
         )
         if not enable_bf_thresh:
-            RUN_PARAMS["bf_intensity_thresh"] = None
+            RUN_PARAMS.bf_intensity_thresh = None
 
         enable_radial_thresh = st.checkbox(
-            "Enable Radial Threshold Ratio",
+            "Manually set Radial Threshold Ratio",
             value=False,
             help="Control how seeds touching each other are split",
         )
-        RUN_PARAMS["radial_threshold_ratio"] = st.slider(
+        RUN_PARAMS.radial_threshold_ratio = st.slider(
             "Radial Threshold Ratio",
             th_min,
             th_max,
@@ -343,30 +354,34 @@ with st.expander("**Parameters for manual setup**"):
             help="Fraction of median seed radius used for separation",
         )
         if not enable_radial_thresh:
-            RUN_PARAMS["radial_threshold_ratio"] = None
+            RUN_PARAMS.radial_threshold_ratio = None
 
     with suff_col2:
-        enable_fl_suffix = st.checkbox(
-            "Enable Fluorescent suffix",
-            value=True,
-            disabled=RUN_PARAMS["mode"] == CountMethod.COLORIMETRIC.value,
-            help="Check to override the default fluorescent filename suffix",
-        )
-        RUN_PARAMS["fl_suffix"] = st.text_input(
-            "Fluorescent suffix",
-            value=DEFAULT_FLUORESCENT_SUFFIX,
-            disabled=(not enable_fl_suffix or RUN_PARAMS["mode"] != "fluorescence"),
-            help="Suffix that identifies fluorescent images (e.g. 'FL')",
-        )
-        if not enable_fl_suffix:
-            RUN_PARAMS["fl_suffix"] = None
+        RUN_PARAMS.fl_suffix = None
+        if RUN_PARAMS.mode == CountMethod.FLUORESCENCE:
+            enable_fl_suffix = st.checkbox(
+                "Manually set Fluorescent suffix",
+                value=True,
+                disabled=RUN_PARAMS.mode == CountMethod.COLORIMETRIC,
+                help="Check to override the default fluorescent filename suffix",
+            )
+            RUN_PARAMS.fl_suffix = st.text_input(
+                "Fluorescent suffix",
+                value=DEFAULT_FLUORESCENT_SUFFIX,
+                disabled=(
+                    not enable_fl_suffix or RUN_PARAMS.mode != CountMethod.FLUORESCENCE
+                ),
+                help="Suffix that identifies fluorescent images (e.g. 'FL')",
+            )
+            if not enable_fl_suffix:
+                RUN_PARAMS.fl_suffix = None
 
         enable_fl_thresh = st.checkbox(
-            "Enable Fluorescent Intensity Threshold",
+            "Manually set Fluorescent Intensity Threshold",
             value=False,
             help="Override automatic thresholding for the fluorescent image",
         )
-        RUN_PARAMS["fl_intensity_thresh"] = st.slider(
+        RUN_PARAMS.fl_intensity_thresh = st.slider(
             "Fluorescent Intensity Threshold",
             0,
             255,
@@ -375,7 +390,7 @@ with st.expander("**Parameters for manual setup**"):
             help="Lower to capture dim seeds, raise to reduce background",
         )
         if not enable_fl_thresh:
-            RUN_PARAMS["fl_intensity_thresh"] = None
+            RUN_PARAMS.fl_intensity_thresh = None
 
     st.divider()
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):
@@ -427,7 +442,7 @@ if st.session_state.clicked_run:
         output_imgs = get_output_imgs(run_results["output_dir"])
         # group images by prefix
         prefix_to_output_imgs = build_prefix_to_output_imgs(
-            output_imgs, RUN_PARAMS["mode"]
+            output_imgs, RUN_PARAMS.mode
         )
         print(f"prefix_to_output_imgs: {prefix_to_output_imgs}")
 
