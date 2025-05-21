@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import cv2
+from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -96,6 +97,14 @@ def dt_threshold_from_median(
     return dt_thresh
 
 
+@dataclass
+class ProcessImageResult:
+    num_seeds: int
+    brightness_thresh: int
+    radial_thresh: float
+    median_area: float
+
+
 def process_seed_image(
     image: np.ndarray,
     img_type: str,
@@ -108,7 +117,7 @@ def process_seed_image(
     remove_scale_bar: bool = True,
     radial_threshold_ratio: float | None = None,
     large_area_factor: float | None = None,
-) -> int:
+) -> ProcessImageResult:
     """
     Process a seed image to count the number of seeds.
     Applies normalization, thresholding, area filtering, and segmentation.
@@ -381,7 +390,7 @@ def process_seed_image(
     # --- Save output image if requested ---
     if output_dir is not None:
         cv2.imwrite(
-            f"{output_dir}/{sample_name}_{img_type}_brightness={initial_brightness_thresh}_radial={radial_threshold}_contours.png",
+            f"{output_dir}/{sample_name}_{img_type}_contours_brightness={initial_brightness_thresh:.2f}_radial={radial_threshold:.2f}.png",
             image_with_contours_final,
         )
 
@@ -389,7 +398,12 @@ def process_seed_image(
     if plot:
         plot_all(plots)
 
-    return num_seeds
+    return ProcessImageResult(
+        num_seeds=num_seeds,
+        brightness_thresh=initial_brightness_thresh,
+        radial_thresh=radial_threshold,
+        median_area=median_area,
+    )
 
 
 def process_colorimetric_image(
@@ -402,10 +416,10 @@ def process_colorimetric_image(
     output_dir: str | None = None,
     large_area_factor: float | None = None,
     plot: bool = False,
-) -> tuple[int, int]:
+) -> tuple[ProcessImageResult, ProcessImageResult]:
     """Process a single RGB image for total and colored seeds."""
     original_image = cv2.imread(image_path)
-    total = process_seed_image(
+    all_seeds_process_result = process_seed_image(
         image=original_image,
         img_type=DEFAULT_BRIGHTFIELD_SUFFIX,
         sample_name=sample_name,
@@ -419,7 +433,7 @@ def process_colorimetric_image(
     )
 
     red_masked = mask_red_marker(original_image)
-    colored = process_seed_image(
+    colored_seeds_process_result = process_seed_image(
         image=original_image,
         image_L=red_masked,
         img_type=DEFAULT_FLUORESCENT_SUFFIX,
@@ -431,4 +445,4 @@ def process_colorimetric_image(
         output_dir=output_dir,
         plot=plot,
     )
-    return total, colored
+    return all_seeds_process_result, colored_seeds_process_result

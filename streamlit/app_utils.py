@@ -110,11 +110,9 @@ def run_batch(
 
     print(f"{run_params=}")
 
-    mode = run_params.get("mode", CountMethod.FLUORESCENCE)
-
     yield f"Running batch {batch_id} with params: {run_params}"
     results = None
-    if mode == CountMethod.FLUORESCENCE:
+    if run_params.mode == CountMethod.FLUORESCENCE:
         iterator = process_fluorescent_batch(
             sample_to_files=sample_to_files,
             bf_thresh=bf_thresh,

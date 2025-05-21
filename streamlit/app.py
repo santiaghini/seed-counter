@@ -32,10 +32,8 @@ from constants import INSTRUCTIONS_TEXT, PARAM_HINTS
 from utils import (
     CountMethod,
     Result,
-    build_results_csv,
     store_results,
     parse_filename,
-    get_results_rounded,
 )
 
 st.set_page_config(
@@ -62,7 +60,7 @@ RUN_PARAMS = AppRunParams(
     fl_suffix=None,
     bf_intensity_thresh=None,
     fl_intensity_thresh=None,
-    radial_threshold_ratio=None,
+    radial_threshold_ratio=RADIAL_THRESH_DEFAULT,
     large_area_factor=None,
 )
 PREFIX_TO_FILENAMES = None
@@ -367,7 +365,7 @@ with st.expander("**Parameters for manual setup**"):
             help="Fraction of the median seed radius which is removed for splitting seeds",
         )
         if not enable_radial_thresh:
-            RUN_PARAMS.radial_threshold_ratio = None
+            RUN_PARAMS.radial_threshold_ratio = RADIAL_THRESH_DEFAULT
 
     with suff_col2:
         RUN_PARAMS.fl_suffix = None
@@ -424,20 +422,14 @@ if st.session_state.clicked_run:
             st.write(line)
 
     if run_results["results"]:
+        results: List[Result] = run_results["results"]
+        results_csv_path = store_results(results, run_results["output_dir"], BATCH_ID)
 
-        results_rounded = get_results_rounded(run_results["results"], 2)
-        results_csv = build_results_csv(results_rounded)
-        results_csv_path = store_results(
-            results_csv, run_results["output_dir"], BATCH_ID
-        )
-
-        print(f"results_csv: {results_csv}")
-
-        results_dict = [result.to_dict() for result in results_rounded]
+        results_dict = [result.to_dict() for result in results]
         # build pandas df from results_dict
         df = pd.DataFrame(results_dict)
 
-        st.table(df)
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
         st.download_button(
             label="Download results as CSV",
@@ -475,7 +467,7 @@ if st.session_state.clicked_run:
             }
             suffix_to_key = {
                 DEFAULT_BRIGHTFIELD_SUFFIX: "total_seeds",
-                DEFAULT_FLUORESCENT_SUFFIX: "fl_seeds",
+                DEFAULT_FLUORESCENT_SUFFIX: "marker_seeds",
             }
             for img_type in [
                 DEFAULT_BRIGHTFIELD_SUFFIX,

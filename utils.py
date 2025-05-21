@@ -4,6 +4,7 @@ import math
 import os
 from enum import Enum
 from datetime import datetime
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,69 +74,71 @@ def plot_all(plots: list[tuple[np.ndarray, str, str | None]]) -> None:
 @dataclass
 class Result:
     prefix: str
-    _fl_seeds: int | None = None
-    _non_fl_seeds: int | None = None
-    _total_seeds: int | None = None
-    _ratio_fl_total: float | None = None
-    _chisquare: float | None = None
-    _pvalue: float | None = None
+    marker_seeds: int | None = None
+    total_seeds: int | None = None
     target_ratio: float = TARGET_RATIO
+    bf_thresh: int | None = None
+    marker_thresh: int | None = None
+    radial_threshold_ratio: float | None = None
 
     def __repr__(self) -> str:
-        return f"Result(prefix={self.prefix}, fl_seeds={self.fl_seeds}, non_fl_seeds={self._non_fl_seeds}, total_seeds={self.total_seeds}, ratio_fl_total={self._ratio_fl_total}, chisquare={self._chisquare}, pvalue={self._pvalue})"
+        return (
+            f"Result(prefix={self.prefix!r}, "
+            f"marker_seeds={self.marker_seeds!r}, "
+            f"non_marker_seeds={self.non_marker_seeds!r}, "
+            f"total_seeds={self.total_seeds!r}, "
+            f"ratio_marker_total={self.ratio_marker_total!r}, "
+            f"target_ratio={self.target_ratio!r}, "
+            f"chisquare={self.chisquare!r}, "
+            f"pvalue={self.pvalue!r}, "
+            f"bf_thresh={self.bf_thresh!r}, "
+            f"marker_thresh={self.marker_thresh!r}, "
+            f"radial_threshold_ratio={self.radial_threshold_ratio!r})"
+        )
 
-    def to_dict(self) -> dict[str, float | int | str | None]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "prefix": self.prefix,
-            "fl_seeds": self.fl_seeds,
-            "non_fl_seeds": self._non_fl_seeds,
+            "marker_seeds": self.marker_seeds,
+            "non_marker_seeds": self.non_marker_seeds,
             "total_seeds": self.total_seeds,
-            "ratio_fl_total": self._ratio_fl_total,
-            "chisquare": self._chisquare,
-            "pvalue": self._pvalue,
+            "ratio_marker_total": self.ratio_marker_total,
+            "target_ratio": self.target_ratio,
+            "chisquare": self.chisquare,
+            "pvalue": self.pvalue,
+            "bf_thresh": self.bf_thresh,
+            "marker_thresh": self.marker_thresh,
+            "radial_threshold_ratio": self.radial_threshold_ratio,
         }
 
     @property
-    def fl_seeds(self) -> int | None:
-        return self._fl_seeds
-
-    @fl_seeds.setter
-    def fl_seeds(self, value: int | None) -> None:
-        self._fl_seeds = value
-        self.update_values()
+    def non_marker_seeds(self) -> int | None:
+        if self.total_seeds and self.marker_seeds:
+            return self.total_seeds - self.marker_seeds
+        return None
 
     @property
-    def total_seeds(self) -> int | None:
-        return self._total_seeds
+    def ratio_marker_total(self) -> float | None:
+        if self.total_seeds and self.marker_seeds:
+            return self.marker_seeds / self.total_seeds
+        return None
 
-    @total_seeds.setter
-    def total_seeds(self, value: int | None) -> None:
-        self._total_seeds = value
-        self.update_values()
+    @property
+    def chisquare(self) -> float | None:
+        if self.total_seeds and self.marker_seeds:
+            _chisquare, _pvalue = compute_chi2(self, self.target_ratio)
+            return _chisquare
+        return None
 
-    def update_values(self) -> None:
-        if self._total_seeds is not None and self._fl_seeds is not None:
-            self._non_fl_seeds = self._total_seeds - self._fl_seeds
-            self._ratio_fl_total = self._fl_seeds / self._total_seeds
-            self._chisquare, self._pvalue = compute_chi2(self, self.target_ratio)
-        else:
-            self._non_fl_seeds = None
-            self._ratio_fl_total = None
-            self._chisquare = None
-            self._pvalue = None
-
-    def round_all(self, decimals: int = 2) -> None:
-        self._fl_seeds = round_if_not_none(self._fl_seeds)
-        self._non_fl_seeds = round_if_not_none(self._non_fl_seeds)
-        self._total_seeds = round_if_not_none(self._total_seeds)
-        self._ratio_fl_total = round_if_not_none(self._ratio_fl_total, decimals)
-        self._chisquare = round_if_not_none(self._chisquare, 4)
-        self._pvalue = round_if_not_none(self._pvalue, 4)
+    @property
+    def pvalue(self) -> float | None:
+        _chisquare, _pvalue = compute_chi2(self, self.target_ratio)
+        return _pvalue
 
 
 def compute_chi2(result: Result, expected_ratio: float) -> tuple[float, float]:
-    observed = np.array([result._fl_seeds, result._non_fl_seeds])
-    total = result._total_seeds
+    observed = np.array([result.marker_seeds, result.non_marker_seeds])
+    total = result.total_seeds
     expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
     chi2_result = chisquare(f_obs=observed, f_exp=expected)
     chi2, p = chi2_result
@@ -143,36 +146,35 @@ def compute_chi2(result: Result, expected_ratio: float) -> tuple[float, float]:
 
 
 def build_results_csv(results: list[Result]) -> list[list[str | float | int | None]]:
+    print(f"results: {results}")
     col_names = [
         "sample",
-        "fl_seeds",
-        "non_fl_seeds",
+        "marker_seeds",
+        "non_marker_seeds",
         "total_seeds",
         "ratio_fl_total",
         "chisquare",
         "pvalue",
+        "bf_intensity_thresh",
+        "marker_intensity_thresh",
+        "radial_threshold_ratio",
     ]
     rows = [col_names]
     for result in results:
         row = [
             result.prefix,
-            result._fl_seeds,
-            result._non_fl_seeds,
-            result._total_seeds,
-            result._ratio_fl_total,
-            result._chisquare,
-            result._pvalue,
+            result.marker_seeds,
+            result.non_marker_seeds,
+            result.total_seeds,
+            round(result.ratio_marker_total, 2),
+            round(result.chisquare, 4),
+            round(result.pvalue, 4),
+            round(result.bf_thresh, 2),
+            round(result.marker_thresh, 2),
+            round(result.radial_threshold_ratio, 2),
         ]
         rows.append(row)
     return rows
-
-
-def get_results_rounded(results: list[Result], decimals: int = 2) -> list[Result]:
-    new_results = results.copy()
-    for result in results:
-        result.round_all(decimals)
-
-    return new_results
 
 
 def round_if_not_none(num: float | int | None, decimals: int = 2) -> float | int | None:
@@ -180,24 +182,34 @@ def round_if_not_none(num: float | int | None, decimals: int = 2) -> float | int
 
 
 def store_results(
-    results_csv: list[list[str | float | int | None]],
+    results: list[Result],
     batch_output_dir: str,
     batch_id: str | None = None,
     filename: str | None = None,
 ) -> str:
+    results_csv = build_results_csv(results)
+
+    bf_thresh = results[0].bf_thresh
+    marker_thresh = results[0].marker_thresh
+    radial_ratio = results[0].target_ratio
+
     # save file with current timestamp
     if not batch_id:
         batch_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if not filename:
-        filename = f"results_{batch_id}.csv"
+        filename = (
+            f"results_{batch_id}_bfthresh={round(bf_thresh, 2) if bf_thresh is not None else bf_thresh}"
+            f"_markerthresh={round(marker_thresh, 2) if marker_thresh is not None else marker_thresh}"
+            f"_radialratio={round(radial_ratio, 2) if radial_ratio is not None else radial_ratio}.csv"
+        )
 
     output_path = os.path.join(batch_output_dir, filename)
 
     os.makedirs(batch_output_dir, exist_ok=True)
     with open(output_path, "w") as f:
         for row in results_csv:
-            f.write(",".join([str(r) for r in row]) + "\n")
+            f.write(",".join([f"{r}" for r in row]) + "\n")
 
     return output_path
 

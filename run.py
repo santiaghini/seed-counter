@@ -14,8 +14,6 @@ from utils import (
     VALID_EXTENSIONS,
     CountMethod,
     Result,
-    build_results_csv,
-    get_results_rounded,
     parse_filename,
     store_results,
 )
@@ -49,6 +47,7 @@ def process_fluorescent_batch(
     for i, sample_name in enumerate(sorted(sample_to_files.keys())):
         yield f"Processing sample {sample_name} ({i+1} of {len(sample_to_files.keys())}):"
         result = Result(sample_name)
+        result.radial_threshold_ratio = radial_threshold_ratio
         for file_obj in sample_to_files[sample_name]:
             file_path = file_obj["file_path"]
             filename = file_obj["file_name"]
@@ -58,7 +57,7 @@ def process_fluorescent_batch(
             if img_type == bf_suffix:
                 yield f"\t{bf_suffix} (brightfield) image: {filename}"
                 img_type_name = DEFAULT_BRIGHTFIELD_SUFFIX
-                total_seeds = process_seed_image(
+                process_seed_result = process_seed_image(
                     image=image,
                     img_type=img_type_name,
                     sample_name=sample_name,
@@ -70,11 +69,12 @@ def process_fluorescent_batch(
                     output_dir=batch_output_dir,
                     plot=plot,
                 )
-                result.total_seeds = total_seeds
+                result.total_seeds = process_seed_result.num_seeds
+                result.bf_thresh = process_seed_result.brightness_thresh
             elif img_type == fl_suffix:
                 yield f"\t{fl_suffix} (fluorescent) image: {filename}"
                 img_type_name = DEFAULT_FLUORESCENT_SUFFIX
-                fl_seeds = process_seed_image(
+                process_seed_result = process_seed_image(
                     image=image,
                     img_type=img_type_name,
                     sample_name=sample_name,
@@ -86,13 +86,14 @@ def process_fluorescent_batch(
                     output_dir=batch_output_dir,
                     plot=plot,
                 )
-                result.fl_seeds = fl_seeds
+                result.marker_seeds = process_seed_result.num_seeds
+                result.marker_thresh = process_seed_result.brightness_thresh
             else:
                 yield f"\tUnknown image type for {filename}"
 
         if result.total_seeds == None:
             yield f"\tCouldn't find {bf_suffix} (brightfield) image for {sample_name}. Remember that image should be named <prefix_id>_{bf_suffix}.<img_extension>. Example: img1_{bf_suffix}.tif"
-        if result.fl_seeds == None:
+        if result.marker_seeds == None:
             yield f"\tCouldn't find {fl_suffix} (fluorescent) image for {sample_name}. Remember that image should be named <prefix_id>_{fl_suffix}.<img_extension>. Example: img1_{fl_suffix}.tif"
 
         results.append(result)
@@ -117,20 +118,25 @@ def process_colorimetric_batch(
         yield f"Processing sample {sample_name} ({i+1} of {len(sample_to_file)}):"
         assert len(sample_to_file[sample_name]), "Sample should have only one image"
         file_path = sample_to_file[sample_name][0]["file_path"]
-        total, colored = process_colorimetric_image(
-            image_path=file_path,
-            sample_name=sample_name,
-            bf_thresh=bf_thresh,
-            fl_thresh=fl_thresh,
-            radial_threshold=radial_thresh,
-            radial_threshold_ratio=radial_threshold_ratio,
-            output_dir=batch_output_dir,
-            large_area_factor=large_area_factor,
-            plot=plot,
+        all_seeds_process_result, colored_seeds_process_result = (
+            process_colorimetric_image(
+                image_path=file_path,
+                sample_name=sample_name,
+                bf_thresh=bf_thresh,
+                fl_thresh=fl_thresh,
+                radial_threshold=radial_thresh,
+                radial_threshold_ratio=radial_threshold_ratio,
+                output_dir=batch_output_dir,
+                large_area_factor=large_area_factor,
+                plot=plot,
+            )
         )
         result = Result(sample_name)
-        result.total_seeds = total
-        result.fl_seeds = colored
+        result.total_seeds = all_seeds_process_result.num_seeds
+        result.bf_thresh = all_seeds_process_result.brightness_thresh
+        result.marker_seeds = colored_seeds_process_result.num_seeds
+        result.marker_thresh = colored_seeds_process_result.brightness_thresh
+        result.radial_threshold_ratio = radial_threshold_ratio
         results.append(result)
 
     yield results
@@ -334,10 +340,7 @@ if __name__ == "__main__":
         else:
             results = message
 
-    results_rounded = get_results_rounded(results, 2)
-    results_csv = build_results_csv(results_rounded)
-
     # Results CSV is always stored in the output directory
-    store_results(results_csv, args.output)
+    store_results(results, args.output)
 
     print("Thanks for your visit!")
