@@ -9,6 +9,8 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 import pandas as pd
 from PIL import Image
 
+from utils import CountMethod
+
 
 # Add the parent directory of the current script to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -264,11 +266,11 @@ st.subheader("Upload your images")
 
 mode_option = st.radio(
     "Select counting mode",
-    ["Fluorescence", "Color"],
+    ["Fluorescence", "Colorimetric"],
     horizontal=True,
-    help="Fluorescence: paired FL/BF images. Color: single RGB images",
+    help="Fluorescence: paired fluorescent/brightfield images. Colorimetric: single RGB images",
 )
-RUN_PARAMS["mode"] = "fluorescence" if mode_option == "Fluorescence" else "color"
+RUN_PARAMS["mode"] = CountMethod.FLUORESCENCE.value if mode_option == "Fluorescence" else CountMethod.COLORIMETRIC.value
 
 if RUN_PARAMS["mode"] == "fluorescence":
     uploader_text = "Upload files with the format <sample_name>_<img_type>.tif"
@@ -294,10 +296,11 @@ with st.expander("**Parameters for manual setup**"):
 
     suff_col1, suff_col2 = st.columns(2)
     with suff_col1:
+        if RUN_PARAMS["mode"] 
         enable_bf_suffix = st.checkbox(
             "Enable Brightfield suffix",
             value=True,
-            disabled=RUN_PARAMS["mode"] == "color",
+            disabled=RUN_PARAMS["mode"] == CountMethod.COLORIMETRIC.value,
             help="Check to override the default brightfield filename suffix",
         )
         RUN_PARAMS["bf_suffix"] = st.text_input(
@@ -346,7 +349,7 @@ with st.expander("**Parameters for manual setup**"):
         enable_fl_suffix = st.checkbox(
             "Enable Fluorescent suffix",
             value=True,
-            disabled=RUN_PARAMS["mode"] == "color",
+            disabled=RUN_PARAMS["mode"] == CountMethod.COLORIMETRIC.value,
             help="Check to override the default fluorescent filename suffix",
         )
         RUN_PARAMS["fl_suffix"] = st.text_input(

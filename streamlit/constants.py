@@ -9,7 +9,7 @@ Seed Counter can operate in two modes:
    - `extension` is usually `.tif`
    Example: `VZ254_BF.tif` and `VZ254_FL.tif`
 
-2. **Color mode** expects a single RGB image per sample in which the marked seeds appear in a distinct color. The filename of each image is used as the sample name.
+2. **Colorimetric mode** expects a single RGB image per sample in which the marked seeds appear in a distinct color. The filename of each image is used as the sample name.
 
 Choose the appropriate mode below, upload your images, then click **Run Seed Counter** to process the batch and download a CSV with the results.
 """

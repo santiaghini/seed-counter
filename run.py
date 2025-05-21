@@ -9,7 +9,7 @@ from config import (
     DEFAULT_FLUORESCENT_SUFFIX,
     INITIAL_BRIGHTNESS_THRESHOLDS,
 )
-from seeds import process_seed_image, process_color_image
+from seeds import process_seed_image, process_colorimetric_image
 from utils import (
     VALID_EXTENSIONS,
     CountMethod,
@@ -100,7 +100,7 @@ def process_fluorescent_batch(
     yield results
 
 
-def process_color_batch(
+def process_colorimetric_batch(
     sample_to_file: Dict[str, Dict[str, str]],
     bf_thresh: int | None,
     fl_thresh: int | None,
@@ -117,7 +117,7 @@ def process_color_batch(
         yield f"Processing sample {sample_name} ({i+1} of {len(sample_to_file)}):"
         assert len(sample_to_file[sample_name]), "Sample should have only one image"
         file_path = sample_to_file[sample_name][0]["file_path"]
-        total, colored = process_color_image(
+        total, colored = process_colorimetric_image(
             image_path=file_path,
             sample_name=sample_name,
             bf_thresh=bf_thresh,
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode",
         type=str,
-        choices=[CountMethod.FLUORESCENCE.value, CountMethod.COLOR.value],
+        choices=[CountMethod.FLUORESCENCE.value, CountMethod.COLORIMETRIC.value],
         default=CountMethod.FLUORESCENCE.value,
         help="Counting mode to use.",
     )
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     else:
         bf_thresh, fl_thresh = None, None
 
-    if args.mode != "color":
+    if args.mode != CountMethod.COLORIMETRIC.value:
         try:
             bf_suffix, fl_suffix = args.img_type_suffix.split(",")
         except Exception:
@@ -317,7 +317,7 @@ if __name__ == "__main__":
             plot=args.plot,
         )
     else:
-        iterator = process_color_batch(
+        iterator = process_colorimetric_batch(
             sample_to_file=sample_to_files,
             bf_thresh=bf_thresh,
             fl_thresh=fl_thresh,

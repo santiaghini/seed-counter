@@ -392,7 +392,7 @@ def process_seed_image(
     return num_seeds
 
 
-def process_color_image(
+def process_colorimetric_image(
     image_path: str,
     sample_name: str,
     bf_thresh: int | None = None,

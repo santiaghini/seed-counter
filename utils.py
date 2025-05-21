@@ -19,7 +19,7 @@ class CountMethod(Enum):
     """Enumeration of counting methods."""
 
     FLUORESCENCE = "fluorescence"
-    COLOR = "color"
+    COLORIMETRIC = "colorimetric"
 
 
 def plot_full(img: np.ndarray, title: str = "", cmap: str = "jet") -> None:

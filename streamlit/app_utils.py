@@ -12,7 +12,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from utils import Result
-from run import process_fluorescent_batch, process_color_batch
+from run import process_fluorescent_batch, process_colorimetric_batch
 
 BATCHES_DIR = "batches"
 INPUT_DIR = "input"
@@ -116,7 +116,7 @@ def run_batch(
             large_area_factor=large_area_factor,
         )
     else:
-        iterator = process_color_batch(
+        iterator = process_colorimetric_batch(
             sample_to_file=sample_to_files,
             bf_thresh=bf_thresh,
             fl_thresh=fl_thresh,
