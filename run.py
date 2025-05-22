@@ -70,7 +70,8 @@ def process_fluorescent_batch(
                     plot=plot,
                 )
                 result.total_seeds = process_seed_result.num_seeds
-                result.bf_thresh = process_seed_result.brightness_thresh
+                result.bf_thresh = process_seed_result.brightness_threshold
+                result.radial_threshold = process_seed_result.radial_threshold
             elif img_type == fl_suffix:
                 yield f"\t{fl_suffix} (fluorescent) image: {filename}"
                 img_type_name = DEFAULT_FLUORESCENT_SUFFIX
@@ -87,7 +88,8 @@ def process_fluorescent_batch(
                     plot=plot,
                 )
                 result.marker_seeds = process_seed_result.num_seeds
-                result.marker_thresh = process_seed_result.brightness_thresh
+                result.marker_thresh = process_seed_result.brightness_threshold
+                result.radial_threshold = process_seed_result.radial_threshold
             else:
                 yield f"\tUnknown image type for {filename}"
 
@@ -133,9 +135,10 @@ def process_colorimetric_batch(
         )
         result = Result(sample_name)
         result.total_seeds = all_seeds_process_result.num_seeds
-        result.bf_thresh = all_seeds_process_result.brightness_thresh
+        result.bf_thresh = all_seeds_process_result.brightness_threshold
         result.marker_seeds = colored_seeds_process_result.num_seeds
-        result.marker_thresh = colored_seeds_process_result.brightness_thresh
+        result.marker_thresh = colored_seeds_process_result.brightness_threshold
+        result.radial_threshold = all_seeds_process_result.radial_threshold
         result.radial_threshold_ratio = radial_threshold_ratio
         results.append(result)
 

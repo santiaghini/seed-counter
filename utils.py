@@ -79,6 +79,7 @@ class Result:
     target_ratio: float = TARGET_RATIO
     bf_thresh: int | None = None
     marker_thresh: int | None = None
+    radial_threshold: float | None = None
     radial_threshold_ratio: float | None = None
 
     def __repr__(self) -> str:
@@ -93,6 +94,7 @@ class Result:
             f"pvalue={self.pvalue!r}, "
             f"bf_thresh={self.bf_thresh!r}, "
             f"marker_thresh={self.marker_thresh!r}, "
+            f"radial_threshold={self.radial_threshold!r})"
             f"radial_threshold_ratio={self.radial_threshold_ratio!r})"
         )
 
@@ -108,6 +110,7 @@ class Result:
             "pvalue": self.pvalue,
             "bf_thresh": self.bf_thresh,
             "marker_thresh": self.marker_thresh,
+            "radial_threshold": self.radial_threshold,
             "radial_threshold_ratio": self.radial_threshold_ratio,
         }
 
@@ -157,6 +160,7 @@ def build_results_csv(results: list[Result]) -> list[list[str | float | int | No
         "pvalue",
         "bf_intensity_thresh",
         "marker_intensity_thresh",
+        "radial_threshold",
         "radial_threshold_ratio",
     ]
     rows = [col_names]
@@ -171,6 +175,7 @@ def build_results_csv(results: list[Result]) -> list[list[str | float | int | No
             round(result.pvalue, 4),
             round(result.bf_thresh, 2),
             round(result.marker_thresh, 2),
+            round(result.radial_threshold, 2),
             round(result.radial_threshold_ratio, 2),
         ]
         rows.append(row)
@@ -201,6 +206,7 @@ def store_results(
         filename = (
             f"results_{batch_id}_bfthresh={round(bf_thresh, 2) if bf_thresh is not None else bf_thresh}"
             f"_markerthresh={round(marker_thresh, 2) if marker_thresh is not None else marker_thresh}"
+            f"_radialthresh={round(results[0].radial_threshold_ratio, 2) if results[0].radial_threshold_ratio is not None else results[0].radial_threshold_ratio}"
             f"_radialratio={round(radial_ratio, 2) if radial_ratio is not None else radial_ratio}.csv"
         )
 

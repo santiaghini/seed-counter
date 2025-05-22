@@ -100,8 +100,8 @@ def dt_threshold_from_median(
 @dataclass
 class ProcessImageResult:
     num_seeds: int
-    brightness_thresh: int
-    radial_thresh: float
+    brightness_threshold: int
+    radial_threshold: float
     median_area: float
 
 
@@ -292,6 +292,7 @@ def process_seed_image(
             dist_transform=dist_transform,
             frac=radial_threshold_ratio,
         )
+        print(f"obtained radial threshold: {radial_threshold:.2f}")
 
     # --- Threshold distance transform to get sure foreground ---
     # This isolates the core of each seed.
@@ -390,7 +391,7 @@ def process_seed_image(
     # --- Save output image if requested ---
     if output_dir is not None:
         cv2.imwrite(
-            f"{output_dir}/{sample_name}_{img_type}_contours_brightness={initial_brightness_thresh:.2f}_radial={radial_threshold:.2f}.png",
+            f"{output_dir}/{sample_name}_{img_type}_contours_brightness={initial_brightness_thresh:.2f}_radialthresh={radial_threshold:.2f}_radialratio={radial_threshold_ratio:.2f}.png",
             image_with_contours_final,
         )
 
@@ -400,8 +401,8 @@ def process_seed_image(
 
     return ProcessImageResult(
         num_seeds=num_seeds,
-        brightness_thresh=initial_brightness_thresh,
-        radial_thresh=radial_threshold,
+        brightness_threshold=initial_brightness_thresh,
+        radial_threshold=radial_threshold,
         median_area=median_area,
     )
 
