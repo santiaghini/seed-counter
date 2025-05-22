@@ -31,11 +31,13 @@ class AppRunParams:
 
 
 def get_batch_id() -> str:
-    # generate a batch run name based on the current date and time
+    """Return a unique identifier for the current batch run."""
+
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def create_folders(batch_id: str) -> tuple[str, str, str]:
+    """Create directories for a batch and return their paths."""
     batch_dir = os.path.join(BATCHES_DIR, batch_id)
     os.makedirs(batch_dir, exist_ok=True)
 
@@ -53,6 +55,7 @@ def create_folders(batch_id: str) -> tuple[str, str, str]:
 
 
 def results_list_to_dict(results: List[Result]) -> Dict[str, Result]:
+    """Convert a list of :class:`Result` objects into a dictionary keyed by prefix."""
     results_dict = {}
     for result in results:
         results_dict[result.prefix] = result
@@ -60,6 +63,7 @@ def results_list_to_dict(results: List[Result]) -> Dict[str, Result]:
 
 
 def dict_to_results_list(results_dict: Dict[str, Result]) -> List[Result]:
+    """Convert a dictionary of results back into a list."""
     results_list = []
     for prefix, result in results_dict.items():
         results_list.append(result)
@@ -69,6 +73,7 @@ def dict_to_results_list(results_dict: Dict[str, Result]) -> List[Result]:
 def load_files(
     parsed_filenames: List[Dict[str, Any]], input_dir: str
 ) -> Dict[str, List[Dict[str, str]]]:
+    """Save uploaded files to ``input_dir`` and build a mapping for processing."""
     # filter out non-image files
     parsed_filenames.sort(key=lambda obj: obj["file_name"])
 
@@ -98,9 +103,27 @@ def load_files(
 def run_batch(
     batch_id: str,
     run_params: AppRunParams,
-    sample_to_files: Dict[str, List[str]],
+    sample_to_files: Dict[str, List[Dict[str, str]]],
     output_dir: str,
 ) -> Iterable[str | List[Result]]:
+    """Run SeedCounter for a prepared batch of images.
+
+    Parameters
+    ----------
+    batch_id:
+        Identifier for this batch run used when saving outputs.
+    run_params:
+        Configuration parameters collected from the UI.
+    sample_to_files:
+        Mapping of sample names to lists of file descriptor dictionaries.
+    output_dir:
+        Directory where result images and CSV files will be stored.
+
+    Yields
+    ------
+    str or List[Result]
+        Progress messages followed by the final list of :class:`Result` objects.
+    """
     bf_suffix = run_params.bf_suffix
     fl_suffix = run_params.fl_suffix
     bf_thresh = run_params.bf_intensity_thresh

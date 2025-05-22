@@ -134,6 +134,11 @@ def click_run_button() -> None:
 
 @st.cache_data
 def run_for_batch(run_params: AppRunParams, files_uploaded: List[UploadedFile]) -> int:
+    """Execute a batch run with the given parameters and uploaded files.
+
+    Returns ``1`` on success and ``0`` if any error occurred while parsing
+    filenames.
+    """
     parsed_filenames = []
     for f in files_uploaded:
         try:

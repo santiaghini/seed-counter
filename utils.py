@@ -140,6 +140,7 @@ class Result:
 
 
 def compute_chi2(result: Result, expected_ratio: float) -> tuple[float, float]:
+    """Return the chi-square statistic and p-value for a segregation test."""
     observed = np.array([result.marker_seeds, result.non_marker_seeds])
     total = result.total_seeds
     expected = np.array([expected_ratio, (1 - expected_ratio)]) * total
@@ -149,6 +150,7 @@ def compute_chi2(result: Result, expected_ratio: float) -> tuple[float, float]:
 
 
 def build_results_csv(results: list[Result]) -> list[list[str | float | int | None]]:
+    """Return CSV rows (including header) representing the batch ``results``."""
     print(f"results: {results}")
     col_names = [
         "sample",
@@ -192,6 +194,7 @@ def store_results(
     batch_id: str | None = None,
     filename: str | None = None,
 ) -> str:
+    """Write ``results`` to ``batch_output_dir`` and return the CSV path."""
     results_csv = build_results_csv(results)
 
     bf_thresh = results[0].bf_thresh
@@ -221,7 +224,12 @@ def store_results(
 
 
 def parse_filename(filename: str, bf_suffix: str, fl_suffix: str) -> tuple[str, str]:
-    reminder = f"Filenames must be in the format <sample_name>_<image_type_suffix>.<extension>. Example: VZ254_{bf_suffix}.tif"
+    """Parse ``filename`` into ``(sample_name, image_type)``."""
+
+    reminder = (
+        f"Filenames must be in the format <sample_name>_<image_type_suffix>."
+        f"<extension>. Example: VZ254_{bf_suffix}.tif"
+    )
     try:
         pieces = filename.split(".")
         name = pieces[0]
