@@ -50,10 +50,12 @@ def mask_red_marker(
     return core
 
 
-def normalize_seeds_bright(image):
-    """
-    Ensures seeds are always the high (bright) values in the image.
-    Works for both grayscale and color images.
+def normalize_seeds_bright(image: np.ndarray) -> np.ndarray:
+    """Ensure seeds are always represented by high pixel values.
+
+    This helper works for grayscale and color images. It returns a single
+    channel image where the seeds are bright regardless of the original
+    background intensity.
     """
     # Convert to grayscale if image is color
     L_img = image.copy()
