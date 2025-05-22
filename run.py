@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import cv2
 import os
-from textwrap import dedent
 
 from config import (
     DEFAULT_BRIGHTFIELD_SUFFIX,
@@ -25,7 +24,6 @@ DEFAULT_FLUORESCENT_THRESHOLD = INITIAL_BRIGHTNESS_THRESHOLDS[
 ]
 
 from typing import Dict, Iterator, List, Tuple
-from PIL import ImageColor
 
 
 def process_fluorescent_batch(
@@ -40,7 +38,41 @@ def process_fluorescent_batch(
     large_area_factor: float | None = None,
     plot: bool = False,
 ) -> Iterator[str | List[Result]]:
+    """Process a batch of paired brightfield/fluorescent images.
 
+    Parameters
+    ----------
+    sample_to_files:
+        Mapping of sample name to a list of file descriptors. Each descriptor
+        must contain ``file_path``, ``file_name`` and ``img_type``.
+    bf_thresh:
+        Initial threshold for the brightfield image or ``None`` for automatic
+        thresholding.
+    fl_thresh:
+        Initial threshold for the fluorescent image or ``None`` for automatic
+        thresholding.
+    radial_thresh:
+        Distance transform threshold used for seed separation. If ``None`` the
+        value is computed automatically.
+    batch_output_dir:
+        Directory where intermediate images will be stored. ``None`` disables
+        saving images.
+    bf_suffix / fl_suffix:
+        Filename suffixes identifying brightfield and fluorescent images.
+    radial_threshold_ratio:
+        Fraction of the median seed radius used when computing
+        ``radial_thresh`` automatically.
+    large_area_factor:
+        Factor relative to median seed area used to discard very large regions.
+    plot:
+        If ``True`` show intermediate processing plots.
+
+    Yields
+    ------
+    str or List[Result]
+        Status messages during processing followed by the full list of results
+        once the batch is finished.
+    """
     bf_suffix = bf_suffix or DEFAULT_BRIGHTFIELD_SUFFIX
     fl_suffix = fl_suffix or DEFAULT_FLUORESCENT_SUFFIX
 
@@ -105,7 +137,7 @@ def process_fluorescent_batch(
 
 
 def process_colorimetric_batch(
-    sample_to_file: Dict[str, Dict[str, str]],
+    sample_to_file: Dict[str, List[Dict[str, str]]],
     bf_thresh: int | None,
     fl_thresh: int | None,
     radial_thresh: float | None,
@@ -114,7 +146,34 @@ def process_colorimetric_batch(
     large_area_factor: float | None = None,
     plot: bool = False,
 ) -> Iterator[str | List[Result]]:
-    """Process a batch of single RGB images."""
+    """Process a batch of single RGB images.
+
+    Parameters
+    ----------
+    sample_to_file:
+        Mapping of sample names to a list containing one file descriptor for the
+        RGB image. Each descriptor must include ``file_path`` and ``file_name``.
+    bf_thresh, fl_thresh:
+        Optional fixed thresholds for counting all seeds and marker seeds.
+    radial_thresh:
+        Optional distance transform threshold. Computed automatically when
+        ``None``.
+    batch_output_dir:
+        Directory where output images will be stored. ``None`` disables writing
+        images.
+    radial_threshold_ratio:
+        Ratio used to compute ``radial_thresh`` from the median seed size when
+        ``radial_thresh`` is ``None``.
+    large_area_factor:
+        Factor relative to median seed area used to remove large clumps.
+    plot:
+        If ``True`` display intermediate plots for each image.
+
+    Yields
+    ------
+    str or List[Result]
+        Informational messages followed by the final results list.
+    """
 
     results = []
     for i, sample_name in enumerate(sorted(sample_to_file.keys())):
@@ -174,6 +233,21 @@ def collect_img_files(
     bf_suffix: str,
     fl_suffix: str,
 ) -> tuple[Dict[str, List[Dict[str, str]]], List[str]]:
+    """Gather paired image files from a directory.
+
+    Parameters
+    ----------
+    input_dir:
+        Directory containing the images to process.
+    bf_suffix, fl_suffix:
+        Expected suffixes identifying brightfield and fluorescent images.
+
+    Returns
+    -------
+    tuple
+        Mapping from sample names to their file descriptors and the list of all
+        filenames discovered.
+    """
     file_names = [
         f
         for f in os.listdir(input_dir)
@@ -200,6 +274,13 @@ def collect_img_files(
 def collect_single_img_files(
     input_dir: str,
 ) -> tuple[Dict[str, List[Dict[str, str]]], List[str]]:
+    """Collect single RGB images from ``input_dir``.
+
+    The file name (without extension) is used as the sample name.
+
+    Returns a mapping from sample names to a list containing one file descriptor
+    as well as the list of discovered filenames.
+    """
     file_names = [
         f
         for f in os.listdir(input_dir)

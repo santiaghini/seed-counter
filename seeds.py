@@ -15,6 +15,8 @@ from utils import plot_all
 def mask_red_marker(
     image: np.ndarray,
 ) -> np.ndarray:
+    """Return a mask highlighting red marker seeds in an RGB image."""
+
     # Use LAB color space to separate the red marker
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
     L, a, b = cv2.split(lab)
@@ -84,6 +86,7 @@ def dt_threshold_from_median(
     frac: float = 0.40,
     area_tol: float = 0.25,
 ) -> float:
+    """Compute a distance-transform threshold based on the median seed size."""
     lo, hi = median_area * (1 - area_tol), median_area * (1 + area_tol)
 
     # Build a mask of seeds whose area is within area_tol of the median area
