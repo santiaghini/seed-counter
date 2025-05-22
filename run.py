@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import cv2
 import os
+from textwrap import dedent
 
 from config import (
     DEFAULT_BRIGHTFIELD_SUFFIX,
@@ -93,9 +94,9 @@ def process_fluorescent_batch(
             else:
                 yield f"\tUnknown image type for {filename}"
 
-        if result.total_seeds == None:
+        if not result.total_seeds:
             yield f"\tCouldn't find {bf_suffix} (brightfield) image for {sample_name}. Remember that image should be named <prefix_id>_{bf_suffix}.<img_extension>. Example: img1_{bf_suffix}.tif"
-        if result.marker_seeds == None:
+        if not result.marker_seeds:
             yield f"\tCouldn't find {fl_suffix} (fluorescent) image for {sample_name}. Remember that image should be named <prefix_id>_{fl_suffix}.<img_extension>. Example: img1_{fl_suffix}.tif"
 
         results.append(result)
@@ -141,6 +142,19 @@ def process_colorimetric_batch(
         result.radial_threshold = all_seeds_process_result.radial_threshold
         result.radial_threshold_ratio = radial_threshold_ratio
         results.append(result)
+
+        if not result.total_seeds:
+            yield f"\tDid not find any seeds for {sample_name}."
+
+        if not result.marker_seeds:
+            yield f"\tDid not find any marker seeds for {sample_name}. Make sure that the marker seeds are RED and that the non-marker seeds are YELLOW-ish. Other colors are not supported yet."
+
+        if result.marker_seeds and result.total_seeds:
+            yield f"\tSuccessfully processed {sample_name}"
+        else:
+            yield f"\tAdjust parameters to improve results for {sample_name}. See instructions for guidelines on how to ideally set them."
+
+        yield f"\tResults for {sample_name}: {results[-1]}"
 
     yield results
 
