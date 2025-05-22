@@ -407,6 +407,7 @@ with st.expander("**Parameters for manual setup**"):
 
     with suff_col2:
         RUN_PARAMS.fl_suffix = None
+        RUN_PARAMS.fl_intensity_thresh = None
         if RUN_PARAMS.mode == CountMethod.FLUORESCENCE:
             enable_fl_suffix = st.checkbox(
                 "Manually set Fluorescent suffix",
@@ -425,21 +426,21 @@ with st.expander("**Parameters for manual setup**"):
             if not enable_fl_suffix:
                 RUN_PARAMS.fl_suffix = None
 
-        enable_fl_thresh = st.checkbox(
-            f"Manually set {intensity_naming[RUN_PARAMS.mode]['fl']}",
-            value=False,
-            help="Check to override automatic thresholding for the fluorescent image",
-        )
-        RUN_PARAMS.fl_intensity_thresh = st.slider(
-            intensity_naming[RUN_PARAMS.mode]["fl"],
-            0,
-            255,
-            INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX],
-            disabled=not enable_fl_thresh,
-            help="Lower to capture dim seeds, raise to reduce background",
-        )
-        if not enable_fl_thresh:
-            RUN_PARAMS.fl_intensity_thresh = None
+            enable_fl_thresh = st.checkbox(
+                f"Manually set {intensity_naming[RUN_PARAMS.mode]['fl']}",
+                value=False,
+                help="Check to override automatic thresholding for the fluorescent image",
+            )
+            RUN_PARAMS.fl_intensity_thresh = st.slider(
+                intensity_naming[RUN_PARAMS.mode]["fl"],
+                0,
+                255,
+                INITIAL_BRIGHTNESS_THRESHOLDS[DEFAULT_FLUORESCENT_SUFFIX],
+                disabled=not enable_fl_thresh,
+                help="Lower to capture dim seeds, raise to reduce background",
+            )
+            if not enable_fl_thresh:
+                RUN_PARAMS.fl_intensity_thresh = None
 
     st.divider()
     if st.checkbox("Show me tips on how to tune these parameters 🔍"):

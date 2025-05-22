@@ -12,31 +12,82 @@ from config import (
 from utils import plot_all
 
 
+def get_area_mass_target(areas: np.ndarray) -> float:
+    """
+    Compute the area mass target for a set of seed areas.
+
+    The area mass target is defined as the area value at which the cumulative sum
+    of sorted areas reaches or exceeds a set % of the total area. This is useful for
+    distinguishing between typical seed sizes and outliers.
+
+    Args:
+        areas (np.ndarray): Array of seed areas.
+
+    Returns:
+        float: The area value at the % cumulative area mass threshold.
+    """
+    # Sort areas and compute cumulative sum
+    sorted_areas = np.sort(areas)
+    cum_areas = np.cumsum(sorted_areas)
+    total_area = cum_areas[-1]
+    cum_frac = cum_areas / total_area
+
+    # Find the index where cumulative fraction exceeds threshold
+    idx = np.searchsorted(cum_frac, 0.75)
+    area_mass_target = sorted_areas[idx]
+    return area_mass_target
+
+
 def mask_red_marker(
     image: np.ndarray,
-) -> np.ndarray:
+    brightness_threshold: int | None = None,
+) -> tuple[np.ndarray, int]:
     """Return a mask highlighting red marker seeds in an RGB image."""
+    normalized_bright = normalize_seeds_bright(image)
 
     # Use LAB color space to separate the red marker
-    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    lab = cv2.cvtColor(normalized_bright, cv2.COLOR_BGR2LAB)
     L, a, b = cv2.split(lab)
 
     # Threshold the L channel to get all the seeds
-    thr_L, seeds_mask = cv2.threshold(
-        L, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
-    )
+    if brightness_threshold is None:
+        thr_L, seeds_mask = cv2.threshold(
+            L, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
+        )
+    else:
+        thr_L, seeds_mask = cv2.threshold(
+            L, brightness_threshold, 255, cv2.THRESH_BINARY
+        )
+
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     seeds_mask = cv2.morphologyEx(seeds_mask, cv2.MORPH_OPEN, kernel, 1)
 
     # threshold to obtain the non-marker seeds
-    thr_marker, non_marker = cv2.threshold(
-        b, 50, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU
+    # if the image was inverted in colors in the normalization step,
+    # then non marker seeds are very low in b channel, else, very high
+    thr_marker, non_marker_mask = cv2.threshold(
+        b, 15, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
     )
 
-    non_marker = cv2.bitwise_and(non_marker, seeds_mask)  # remove stray BG hits
+    # remove small areas from the non-marker mask, which can be noise
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+        non_marker_mask, connectivity=8
+    )
+    non_marker_mask = cv2.bitwise_and(
+        non_marker_mask, seeds_mask
+    )  # remove stray BG hits
+    areas = stats[1:, cv2.CC_STAT_AREA]  # Exclude background
+    if len(areas) > 0:
+        area_mass_target = get_area_mass_target(areas)
+
+        area_ratio = 0.2
+        min_area = area_mass_target * area_ratio
+        for i in range(1, num_labels):  # skip background
+            if stats[i, cv2.CC_STAT_AREA] < min_area:
+                non_marker_mask[labels == i] = 0
 
     # xor operation to get the marker seeds (red)
-    marker = cv2.bitwise_xor(seeds_mask, non_marker)
+    marker = cv2.bitwise_xor(seeds_mask, non_marker_mask)
 
     # clean-up (little specks, gaps)
     marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel, 1)
@@ -49,7 +100,7 @@ def mask_red_marker(
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
     core = cv2.dilate(core, kernel, iterations=1)  # puts back ~1 px
 
-    return core
+    return core, thr_L
 
 
 def normalize_seeds_bright(image: np.ndarray) -> np.ndarray:
@@ -59,7 +110,6 @@ def normalize_seeds_bright(image: np.ndarray) -> np.ndarray:
     channel image where the seeds are bright regardless of the original
     background intensity.
     """
-    # Convert to grayscale if image is color
     L_img = image.copy()
 
     # Flatten and find the mode (most common pixel value)
@@ -416,7 +466,6 @@ def process_colorimetric_image(
     image_path: str,
     sample_name: str,
     bf_thresh: int | None = None,
-    fl_thresh: int | None = None,
     radial_threshold: float | None = None,
     radial_threshold_ratio: float | None = None,
     output_dir: str | None = None,
@@ -438,17 +487,21 @@ def process_colorimetric_image(
         image_L=None,
     )
 
-    red_masked = mask_red_marker(original_image)
+    red_masked_image, brightness_thresh_used = mask_red_marker(
+        image=original_image,
+        brightness_threshold=bf_thresh,
+    )
     colored_seeds_process_result = process_seed_image(
         image=original_image,
-        image_L=red_masked,
+        image_L=red_masked_image,
         img_type=DEFAULT_FLUORESCENT_SUFFIX,
         sample_name=sample_name,
-        initial_brightness_thresh=fl_thresh,
+        initial_brightness_thresh=bf_thresh,
         radial_threshold=radial_threshold,
         radial_threshold_ratio=radial_threshold_ratio,
         large_area_factor=large_area_factor,
         output_dir=output_dir,
         plot=plot,
     )
+    colored_seeds_process_result.brightness_threshold = brightness_thresh_used
     return all_seeds_process_result, colored_seeds_process_result

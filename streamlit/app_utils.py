@@ -151,7 +151,6 @@ def run_batch(
         iterator = process_colorimetric_batch(
             sample_to_file=sample_to_files,
             bf_thresh=bf_thresh,
-            fl_thresh=fl_thresh,
             radial_thresh=None,
             batch_output_dir=output_dir,
             radial_threshold_ratio=radial_threshold_ratio,

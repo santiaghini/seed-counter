@@ -139,7 +139,6 @@ def process_fluorescent_batch(
 def process_colorimetric_batch(
     sample_to_file: Dict[str, List[Dict[str, str]]],
     bf_thresh: int | None,
-    fl_thresh: int | None,
     radial_thresh: float | None,
     batch_output_dir: str | None,
     radial_threshold_ratio: float | None = None,
@@ -185,7 +184,6 @@ def process_colorimetric_batch(
                 image_path=file_path,
                 sample_name=sample_name,
                 bf_thresh=bf_thresh,
-                fl_thresh=fl_thresh,
                 radial_threshold=radial_thresh,
                 radial_threshold_ratio=radial_threshold_ratio,
                 output_dir=batch_output_dir,
@@ -424,7 +422,6 @@ if __name__ == "__main__":
         iterator = process_colorimetric_batch(
             sample_to_file=sample_to_files,
             bf_thresh=bf_thresh,
-            fl_thresh=fl_thresh,
             radial_thresh=args.radial_thresh,
             batch_output_dir=img_output_dir,
             radial_threshold_ratio=args.radial_threshold_ratio,

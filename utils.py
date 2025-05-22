@@ -94,7 +94,7 @@ class Result:
             f"pvalue={self.pvalue!r}, "
             f"bf_thresh={self.bf_thresh!r}, "
             f"marker_thresh={self.marker_thresh!r}, "
-            f"radial_threshold={self.radial_threshold!r})"
+            f"radial_threshold={self.radial_threshold!r},"
             f"radial_threshold_ratio={self.radial_threshold_ratio!r})"
         )
 
