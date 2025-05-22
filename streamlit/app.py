@@ -271,12 +271,12 @@ def build_caption(result: Result, img_type: str, mode: CountMethod) -> str:
 
     caption_lines = [
         first_line,
-        result.prefix,
+        f"Sample: {result.prefix}",
         f"Brightness Threshold: {brightness}",
         f"Radial Threshold: {radial_thresh}",
         f"Radial Threshold Ratio: {radial_ratio}",
     ]
-    return "\n".join(caption_lines)
+    return " | ".join(caption_lines)
 
 
 ##########################           UI           ##########################
@@ -516,7 +516,9 @@ if st.session_state.clicked_run:
 
                 if image_path:
                     image = Image.open(image_path)
-                    caption = build_caption(results_dict[prefix], img_type, RUN_PARAMS.mode)
+                    caption = build_caption(
+                        results_dict[prefix], img_type, RUN_PARAMS.mode
+                    )
                     st.image(image, caption=caption, width=500)
 
                 value = results_dict[prefix].__getattribute__(suffix_to_key[img_type])
