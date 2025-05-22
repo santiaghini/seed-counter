@@ -34,6 +34,7 @@ from utils import (
     Result,
     store_results,
     parse_filename,
+    round_if_not_none,
 )
 
 st.set_page_config(
@@ -244,6 +245,38 @@ def build_prefix_to_output_imgs(
     print(f"prefix_to_output_imgs: {prefix_to_output_imgs}")
 
     return prefix_to_output_imgs
+
+
+def build_caption(result: Result, img_type: str, mode: CountMethod) -> str:
+    """Return a multi-line caption describing the output image."""
+
+    if mode == CountMethod.FLUORESCENCE:
+        if img_type == DEFAULT_BRIGHTFIELD_SUFFIX:
+            first_line = "Brightfield Seeds"
+            brightness = result.bf_thresh
+        else:
+            first_line = "Fluorescent Seeds"
+            brightness = result.marker_thresh
+    else:  # COLORIMETRIC
+        if img_type == DEFAULT_BRIGHTFIELD_SUFFIX:
+            first_line = "All Seeds"
+            brightness = result.bf_thresh
+        else:
+            first_line = "Marker Seeds"
+            brightness = result.marker_thresh
+
+    radial_thresh = round_if_not_none(result.radial_threshold, 2)
+    radial_ratio = round_if_not_none(result.radial_threshold_ratio, 2)
+    brightness = round_if_not_none(brightness, 2)
+
+    caption_lines = [
+        first_line,
+        result.prefix,
+        f"Brightness Threshold: {brightness}",
+        f"Radial Threshold: {radial_thresh}",
+        f"Radial Threshold Ratio: {radial_ratio}",
+    ]
+    return "\n".join(caption_lines)
 
 
 ##########################           UI           ##########################
@@ -477,13 +510,13 @@ if st.session_state.clicked_run:
                     image_path = prefix_to_output_imgs[prefix][img_type]
                 except KeyError:
                     st.write(
-                        f"Missing image for {readable_type_map[img_type]} ({img_type}) for sample '{prefix}'."
+                        f"Missing image for {readable_type_map.get(img_type, img_type)} ({img_type}) for sample '{prefix}'."
                     )
                     image_path = None
 
                 if image_path:
                     image = Image.open(image_path)
-                    caption = f"{readable_type_map[img_type]} - {image_path}"
+                    caption = build_caption(results_dict[prefix], img_type, RUN_PARAMS.mode)
                     st.image(image, caption=caption, width=500)
 
                 value = results_dict[prefix].__getattribute__(suffix_to_key[img_type])
