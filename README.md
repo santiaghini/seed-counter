@@ -56,9 +56,9 @@ python run.py --dir ./images --output ./output_directory --mode fluorescence --i
 - `-n, --nostore`: flag, if present, does not store the processed images with contours for counting, only the final results in .csv format. Default is `False`.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
 - `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`. Range is from 0 to 255.
-- `-r, --radial_thresh`: radial distance threshold for seed separation. Usually ranges from `8.0` to `16.0`. If omitted, this value is computed automatically.
-- `--radial_threshold_ratio`: percent of the mean seed radius to use for setting the threshold for the watershed algorithm. Default is `0.4`, which means that the recognized seed areas are reduced by 40% to separate touching seeds. Range is 0.0 to 1.0. 
-- `--large_area_factor`: factor to filter out objects larger than this multiple of the median seed area. Range is 0 to 100. This is usually unnecessary for clean images.
+- `-r, --radial_thresh`: radial distance threshold for seed separation via the watershed algorithm. Usually ranges from `8.0` to `16.0`. If not set, this value is computed automatically from the `radial_threshold_ratio` value. If set, this overrides the `--radial_threshold_ratio` parameter. 
+- `--radial_threshold_ratio`: percent of the mean seed radius to use for setting the radial threshold for seed separation via the watershed algorithm. Default is `0.4`, which means that the recognized seed areas are reduced by 40% to separate touching seeds. Range is `0.0` to `1.0`. 
+- `--large_area_factor`: factor to filter out objects larger than this multiple of the median seed area. Range is `0` to `100`. This is usually unnecessary for clean images.
 - `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images.
 - `--mode`: either `fluorescence` (default) or `colorimetric`.
 
