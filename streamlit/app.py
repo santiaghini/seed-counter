@@ -38,7 +38,7 @@ from utils import (
 )
 
 st.set_page_config(
-    page_title="SeedCounter by the Brophy Lab",
+    page_title="SeedSeg by the Brophy Lab",
     menu_items={
         "About": "Run by the Brophy Lab",
         "Report a Bug": "mailto:jbrophy@stanford.edu",
@@ -286,7 +286,7 @@ def build_caption(result: Result, img_type: str, mode: CountMethod) -> str:
 
 ##########################           UI           ##########################
 
-st.title(":seedling: SeedCounter")
+st.title(":seedling: SeedSeg")
 st.subheader("The Brophy Lab's automated seed counting app")
 
 st.markdown("[Link to GitHub Repo](https://github.com/santiaghini/seed-counter)")
@@ -448,7 +448,7 @@ with st.expander("**Parameters for manual setup**"):
 
 
 ### RUN BUTTON
-st.button("Run SeedCounter", disabled=not uploaded_files, on_click=click_run_button)
+st.button("Run SeedSeg", disabled=not uploaded_files, on_click=click_run_button)
 if st.session_state.clicked_run:
     print(f"uploaded_files: {uploaded_files}")
 
