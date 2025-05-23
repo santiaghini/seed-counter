@@ -289,7 +289,7 @@ def build_caption(result: Result, img_type: str, mode: CountMethod) -> str:
 st.title(":seedling: SeedSeg")
 st.subheader("The Brophy Lab's automated seed counting app")
 
-st.markdown("[Link to GitHub Repo](https://github.com/santiaghini/seed-counter)")
+st.markdown("[Link to GitHub Repo](https://github.com/santiaghini/seedseg)")
 
 on = st.toggle
 if on:
