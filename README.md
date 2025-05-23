@@ -1,10 +1,10 @@
-# SeedCounter
+# SeedSeg
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://seed-counter-brophy.streamlit.app)
 
-SeedCounter is a tool that counts the number of seeds in an image. This tool was developed for segregation analysis of transgenic Arabidopsis lines to identify single insertion lines, and as such is optimized for counting the number of transgenic seeds expressing a visible marker (fluorescence or pigment) in a mixed pool of seeds with and without the marker.
+SeedSeg is a tool that counts the number of seeds in an image. This tool was developed for segregation analysis of transgenic Arabidopsis lines to identify single insertion lines, and as such is optimized for counting the number of transgenic seeds expressing a visible marker (fluorescence or pigment) in a mixed pool of seeds with and without the marker.
 
-SeedCounter takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
+SeedSeg takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
 
 **Raw Image**
 <div style="text-align:center">
@@ -21,7 +21,7 @@ SeedCounter takes a batch of images as input and outputs in `.csv` format the co
 </div>
 
 ## Getting started
-SeedCounter can operate in two modes.
+SeedSeg can operate in two modes.
 
 ### Fluorescence mode
 **Fluorescence mode** requires two images per sample:
@@ -47,7 +47,7 @@ First, install the required dependencies. Make sure you have at least `Python 3.
 pip install -r requirements.txt
 ```
 
-After installing requirements, 1) `cd` into the folder containing this repo and 2) make sure that the images are in a directory and in the format and specification specified above. Then, *Seed Counter* can be run with:
+After installing requirements, 1) `cd` into the folder containing this repo and 2) make sure that the images are in a directory and in the format and specification specified above. Then, *SeedSeg* can be run with:
 ```bash
 python run.py --dir ./images --output ./output_directory --mode fluorescence --intensity_thresh 30,30
 ```

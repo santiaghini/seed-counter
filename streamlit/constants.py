@@ -1,5 +1,5 @@
 INSTRUCTIONS_TEXT = """
-Seed Counter can operate in two modes:
+SeedSeg can operate in two modes:
 1. **Fluorescence mode** expects image pairs:
    - A fluorescence intensity image to count seeds expressing a fluorescent marker
    - A brightfield image to count total seeds
@@ -11,7 +11,7 @@ Seed Counter can operate in two modes:
 
 2. **Colorimetric mode** expects a single RGB image per sample in which the marked seeds appear in a distinct color. The filename of each image is used as the sample name.
 
-Choose the appropriate mode below, upload your images, then click **Run Seed Counter** to process the batch and download a CSV with the results.
+Choose the appropriate mode below, upload your images, then click **Run SeedSeg** to process the batch and download a CSV with the results.
 """
 
 PARAM_HINTS = """

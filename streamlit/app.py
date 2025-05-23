@@ -473,7 +473,7 @@ if st.session_state.clicked_run:
         st.download_button(
             label="Download results as CSV",
             data=open(results_csv_path, "rb"),
-            file_name=f"seed_counter_{BATCH_ID}.csv",
+            file_name=f"seedseg_{BATCH_ID}.csv",
             mime="text/csv",
         )
 

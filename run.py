@@ -217,7 +217,7 @@ def process_colorimetric_batch(
 
 
 def print_welcome_msg() -> None:
-    print("Welcome to Seed Counter!")
+    print("Welcome to SeedSeg!")
     print(
         "For fluorescence mode, provide pairs of images: "
         f"{DEFAULT_BRIGHTFIELD_SUFFIX} (brightfield) and {DEFAULT_FLUORESCENT_SUFFIX} (fluorescent)."

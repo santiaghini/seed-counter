@@ -106,7 +106,7 @@ def run_batch(
     sample_to_files: Dict[str, List[Dict[str, str]]],
     output_dir: str,
 ) -> Iterable[str | List[Result]]:
-    """Run SeedCounter for a prepared batch of images.
+    """Run SeedSeg for a prepared batch of images.
 
     Parameters
     ----------
