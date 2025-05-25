@@ -2,7 +2,7 @@
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://seed-counter-brophy.streamlit.app)
 
-SeedSeg is a tool that counts the number of seeds in an image. This tool was developed for segregation analysis of transgenic Arabidopsis lines to identify single insertion lines, and as such is optimized for counting the number of transgenic seeds expressing a visible marker (fluorescence or pigment) in a mixed pool of seeds with and without the marker.
+SeedSeg is a tool that counts the number of seeds in an image. This tool was developed for segregation analysis of transgenic Arabidopsis lines to identify lines with a single T-DNA locus, and as such is optimized for counting the number of transgenic seeds expressing a visible marker (fluorescence or pigment) in a mixed pool of seeds with and without the marker.
 
 SeedSeg takes a batch of images as input and outputs in `.csv` format the count of seeds for each input image given.
 
@@ -38,7 +38,7 @@ These images should be in a directory with the following naming convention:
 Example: `VZ254_BF.tif` and `VZ254_FL.tif`
 
 ### Colorimetric mode
-**Colorimetric mode** requires a single RGB image per sample where transgenic seeds express a marker that displays color visible to the naked eye, such as the [RUBY reporter](https://www.nature.com/articles/s41438-020-00390-1). The file name itself is used as the sample name.
+**Colorimetric mode** requires a single RGB image per sample where transgenic seeds express a marker that displays color visible to the naked eye that is distinct from the color of the wild-type seed. The file name itself is used as the sample name. This is currently optimized for the [RUBY reporter](https://www.nature.com/articles/s41438-020-00390-1).
 
 ## Usage
 
@@ -55,11 +55,11 @@ python run.py --dir ./images --output ./output_directory --mode fluorescence --i
 - `-o, --output`: output directory to store results (required).
 - `-n, --nostore`: flag, if present, does not store the processed images with contours for counting, only the final results in .csv format. Default is `False`.
 - `-p, --plot`: flag, if present, plots intermediate steps for each image. Default is `False`.
-- `-t, --intensity_thresh`: intensity threshold to capture seeds. Format is <brightfield_thresh>,<fluorescent_thresh>. Default is `30,30`. Range is from 0 to 255.
-- `-r, --radial_thresh`: radial distance threshold for separation of overlapping seeds. Usually ranges from `8.0` to `16.0`. If not set, this value is computed automatically from the `radial_threshold_ratio` value. If set, this overrides the `--radial_threshold_ratio` parameter. 
+- `-t, --intensity_thresh`: intensity threshold for calling a pixel as part of a seed. Format is <brightfield_thresh>,<fluorescent_thresh>. Range is from 0 to 255. For `fluorescence` mode, `brightfield_thresh` and `fluorescent_thresh` set the thresholds for the brightfield and fluorescence images respectively. For `colorimetric` mode, only  `brightfield_thresh` is used. If not manually set, the thresholds are automatically calculated from each image using the triangle algorithm. 
+- `-r, --radial_thresh`: radial distance threshold for separation of overlapping seeds. Usually ranges from `8.0` to `16.0`. If not manually set, this value is computed automatically from the `radial_threshold_ratio` value. If set, this overrides the `--radial_threshold_ratio` parameter. 
 - `--radial_threshold_ratio`: percent of the mean seed radius to use for setting the radial threshold for separation of overlapping seeds. Default is `0.4`, which means that the recognized seed areas are reduced by 40% to separate touching seeds. Range is `0.0` to `1.0`. 
 - `--large_area_factor`: factor to filter out objects larger than this multiple of the median seed area. Range is `0` to `100`. This is usually unnecessary for clean images.
-- `-s, --img_type_suffix`: suffix for image types in the naming convention. Default is `FL` for fluorescent and `BF` for brightfield images.
+- `-s, --img_type_suffix`: suffix for image types in the naming convention, used for `fluorescence` mode. Default is `FL` for fluorescent and `BF` for brightfield images.
 - `--mode`: either `fluorescence` (default) or `colorimetric`.
 
 You can get details of all arguments by running:
