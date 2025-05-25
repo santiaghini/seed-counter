@@ -40,6 +40,8 @@ Example: `VZ254_BF.tif` and `VZ254_FL.tif`
 ### Colorimetric mode
 **Colorimetric mode** requires a single RGB image per sample where transgenic seeds express a marker that displays color visible to the naked eye that is distinct from the color of the wild-type seed. The file name itself is used as the sample name. This is currently optimized for the [RUBY reporter](https://www.nature.com/articles/s41438-020-00390-1).
 
+In colorimetric mode, the RGB image is converted to the CIELAB color space, which expresses color as three values: L for lightness, a for the green-red axis, and b* for the blue-yellow axis. The L value is first used to threshold for all seeds against the background, using a single brightness threshold (either manually set or automatically determined via the triangle algorithm). Then, to identify marker vs non-marker seeds, the b* value is used to distinguish the yellow wild-type seeds which have a high b* value from the red RUBY seeds which have a low b* value using an automatically determined threshold. ![image](https://github.com/user-attachments/assets/896a926a-3b59-4868-9125-2872d847b50e)
+
 ## Usage
 
 First, install the required dependencies. Make sure you have at least `Python 3.7`. It is recommended to create a virtual environment first.
