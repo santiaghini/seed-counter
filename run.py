@@ -36,7 +36,7 @@ def process_fluorescent_batch(
     fl_suffix: str | None = None,
     radial_threshold_ratio: float | None = None,
     large_area_factor: float | None = None,
-    plot: bool = False,
+    plot: bool = True,
 ) -> Iterator[str | List[Result]]:
     """Process a batch of paired brightfield/fluorescent images.
 
@@ -143,7 +143,7 @@ def process_colorimetric_batch(
     batch_output_dir: str | None,
     radial_threshold_ratio: float | None = None,
     large_area_factor: float | None = None,
-    plot: bool = False,
+    plot: bool = True,
 ) -> Iterator[str | List[Result]]:
     """Process a batch of single RGB images.
 
